@@ -1347,25 +1347,12 @@ function doLogout() {
   token = null;
   localStorage.removeItem('mailhub_token');
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-  // Reset state
-  currentMailboxId = null;
-  currentMessages = [];
-  currentMessageId = null;
-  currentView = 'mail';
-  currentFolder = 'inbox';
-  // Show login page
-  document.getElementById('appView').style.display = 'none';
-  document.getElementById('loginView').style.display = 'flex';
-  document.getElementById('loginPassword').value = '';
-  document.getElementById('loginUsername').value = '';
-  // Reset turnstile if active
-  if (turnstileSiteKey && turnstileWidgetId !== null) {
-    try { turnstile.reset(turnstileWidgetId); } catch (e) {}
-  }
+  location.reload();
 }
 
 async function showApp() {
-  document.getElementById('loginView').style.display = 'none';
+  var loginEl = document.getElementById('loginView');
+  if (loginEl) loginEl.remove();
   document.getElementById('appView').style.display = 'flex';
   await loadMailboxes();
   navigate('mail');
