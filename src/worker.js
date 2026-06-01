@@ -450,6 +450,7 @@ export default {
             content_type TEXT DEFAULT '',
             size INTEGER DEFAULT 0,
             r2_key TEXT DEFAULT '',
+            cid TEXT DEFAULT '',
             FOREIGN KEY (sent_email_id) REFERENCES sent_emails(id) ON DELETE CASCADE
           )
         `).run();
@@ -460,6 +461,8 @@ export default {
       await db.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_deleted ON messages(is_deleted)`).run().catch(()=>{});
       await db.prepare(`CREATE INDEX IF NOT EXISTS idx_sent_deleted ON sent_emails(is_deleted)`).run().catch(()=>{});
       await db.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_favorite ON messages(is_favorite)`).run().catch(()=>{});
+      // Add cid column for inline image tracking (safe if already exists)
+      await db.prepare(`ALTER TABLE sent_attachments ADD COLUMN cid TEXT DEFAULT ''`).run().catch(()=>{});
 
       dbInitialized = true;
     }
@@ -643,6 +646,7 @@ export default {
             content_type TEXT DEFAULT '',
             size INTEGER DEFAULT 0,
             r2_key TEXT DEFAULT '',
+            cid TEXT DEFAULT '',
             FOREIGN KEY (sent_email_id) REFERENCES sent_emails(id) ON DELETE CASCADE
           )
         `).run();
@@ -1299,8 +1303,8 @@ async function handleSendEmail(request, env, db, json) {
         } catch (e) { console.error('R2 sent attachment error:', e); r2Key = ''; }
       }
       const size = att.content ? Math.round(att.content.length * 3 / 4) : 0;
-      await db.prepare('INSERT INTO sent_attachments (sent_email_id, filename, content_type, size, r2_key) VALUES (?, ?, ?, ?, ?)')
-        .bind(sentId, att.filename || 'attachment', att.content_type || 'application/octet-stream', size, r2Key).run();
+      await db.prepare('INSERT INTO sent_attachments (sent_email_id, filename, content_type, size, r2_key, cid) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(sentId, att.filename || 'attachment', att.content_type || 'application/octet-stream', size, r2Key, att.cid || '').run();
     }
   }
 
@@ -1496,7 +1500,7 @@ async function handleGetSentEmail(path, db, json) {
   // Get attachments for this sent email
   let attachments = [];
   try {
-    const atts = await db.prepare('SELECT id, filename, content_type, size, r2_key FROM sent_attachments WHERE sent_email_id = ?').bind(id).all();
+    const atts = await db.prepare('SELECT id, filename, content_type, size, r2_key, cid FROM sent_attachments WHERE sent_email_id = ?').bind(id).all();
     attachments = atts.results || [];
   } catch (e) { /* table may not exist yet */ }
   return json({ email, attachments });

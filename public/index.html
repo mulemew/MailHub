@@ -2507,12 +2507,13 @@ async function openSentMessage(id) {
     }
     document.getElementById('detailCode').style.display = 'none';
 
-    // Show sent attachments
+    // Show sent attachments (exclude inline CID images)
     const attEl = document.getElementById('detailAttachments');
     const sentAtts = data.attachments || [];
-    if (sentAtts.length) {
+    const regularAtts = sentAtts.filter(function(a) { return !a.cid; });
+    if (regularAtts.length) {
       attEl.style.display = '';
-      attEl.innerHTML = '<div class="card-title">' + T('attachments') + '</div>' + sentAtts.map(function(a) {
+      attEl.innerHTML = '<div class="card-title">' + T('attachments') + '</div>' + regularAtts.map(function(a) {
         return '<span class="att-item" onclick="downloadSentAttachment(' + a.id + ', \'' + esc(a.filename) + '\')"><span class="att-icon">\uD83D\uDCCE</span>' + esc(a.filename) + ' (' + formatSize(a.size) + ')</span>';
       }).join('');
     } else {
@@ -2520,8 +2521,15 @@ async function openSentMessage(id) {
     }
 
     const bodyEl = document.getElementById('detailBody');
-    if (e.html_content) {
-      bodyEl.innerHTML = '<iframe sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="' + esc(e.html_content).replace(/"/g, '&quot;') + '"></iframe>';
+    var htmlContent = e.html_content || '';
+    // Replace CID references with actual attachment download URLs
+    var cidAtts = sentAtts.filter(function(a) { return a.cid; });
+    cidAtts.forEach(function(a) {
+      htmlContent = htmlContent.replace(new RegExp('cid:' + a.cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        '/api/sent-attachments/' + a.id + '/download');
+    });
+    if (htmlContent) {
+      bodyEl.innerHTML = '<iframe sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="' + esc(htmlContent).replace(/"/g, '&quot;') + '"></iframe>';
       setTimeout(function() {
         var f = bodyEl.querySelector('iframe');
         if (f) f.style.height = (f.contentDocument?.body?.scrollHeight || 400) + 'px';
