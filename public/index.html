@@ -512,7 +512,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0
             <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="domain_provider_desc">Controls how domains are onboarded for sending. Resend uses Resend API. CF Email Service uses Cloudflare's native email sending (public beta).</p>
           </div>
           <div class="form-group"><label data-i18n="cf_api_token">Cloudflare API Token</label><input type="password" id="s_cf_api_token">
-            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="cf_api_token_desc">Required for domain DNS management and email routing setup. Token needs permissions: <b>Zone:Read</b>, <b>DNS:Edit</b>, <b>Email Routing Rules:Edit</b>, <b>Email Routing Addresses:Edit</b>, <b>Email Sending:Edit</b> (All zones). ⚠️ This is a <b>runtime</b> token used by the worker — it is <b>different</b> from the <code>CF_API_TOKEN</code> GitHub Actions secret used for deployment.</p>
+            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="cf_api_token_desc" data-i18n-html>Required for domain DNS management and email routing setup. Token needs permissions: <b>Zone:Read</b>, <b>DNS:Edit</b>, <b>Email Routing Rules:Edit</b>, <b>Email Routing Addresses:Edit</b>, <b>Email Sending:Edit</b> (All zones). ⚠️ This is a <b>runtime</b> token used by the worker — it is <b>different</b> from the <code>CF_API_TOKEN</code> GitHub Actions secret used for deployment.</p>
           </div>
           <div class="form-group" id="resend_key_group"><label data-i18n="resend_api_key">Resend API Key</label><input type="password" id="s_resend_api_key"></div>
           <div class="form-group">
@@ -1153,6 +1153,8 @@ function applyI18n() {
     const key = el.dataset.i18n;
     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
       el.placeholder = T(key);
+    } else if (el.dataset.i18nHtml !== undefined) {
+      el.innerHTML = T(key);
     } else {
       el.textContent = T(key);
     }
