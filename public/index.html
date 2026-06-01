@@ -232,6 +232,15 @@ input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0
 @keyframes pulse{from{opacity:.5}to{opacity:1}}
 
 /* ====== Responsive ====== */
+@media(max-width:1200px){
+  .folder-col{width:120px}
+  .msg-list-wrap{width:280px}
+}
+@media(max-width:1050px){
+  .folder-col{width:auto;min-width:0;flex-shrink:1;overflow:hidden}
+  .folder-item{padding:7px 8px;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+  .msg-list-wrap{width:240px;min-width:200px;flex-shrink:1}
+}
 @media(max-width:900px){
   .sidebar{position:fixed;left:-100%;top:0;z-index:100;transition:.3s;width:85vw;max-width:320px}
   .sidebar.open{left:0}
@@ -2014,20 +2023,37 @@ function startAutoRefresh() {
 async function replyToMessage() {
   if (!currentMessageData) return;
   const msg = currentMessageData;
-  const toAddr = msg.to_addr || '';
-  await showCompose(toAddr);
-  // Fill in reply fields
-  const senderEmail = (msg.sender || '').match(/<([^>]+)>/)?.[1] || msg.sender || '';
-  document.getElementById('compTo').value = senderEmail;
-  const subject = msg.subject || '';
-  document.getElementById('compSubject').value = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
-  // Build quoted content
-  const date = parseUtcDate(msg.received_at).toLocaleString();
-  const quoteHeader = '\n\n---------- ' + T('reply') + ' ----------\nFrom: ' + (msg.sender || '') + '\nDate: ' + date + '\nSubject: ' + (msg.subject || '') + '\n\n';
-  const originalText = msg.text_content || '';
-  if (window.quillEditor) {
-    window.quillEditor.setText(quoteHeader + originalText);
-    window.quillEditor.setSelection(0, 0);
+  if (currentDetailType === 'sent') {
+    // Replying to a sent email: compose from the same sender, to the original recipients
+    const fromAddr = msg.from_addr || '';
+    await showCompose(fromAddr);
+    let toAddrs = msg.to_addrs || '';
+    try { toAddrs = JSON.parse(toAddrs).join(', '); } catch(ex) {}
+    document.getElementById('compTo').value = toAddrs;
+    const subject = msg.subject || '';
+    document.getElementById('compSubject').value = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
+    const date = parseUtcDate(msg.created_at || msg.received_at).toLocaleString();
+    const quoteHeader = '\n\n---------- ' + T('reply') + ' ----------\nTo: ' + toAddrs + '\nDate: ' + date + '\nSubject: ' + (msg.subject || '') + '\n\n';
+    const originalText = msg.text_content || '';
+    if (window.quillEditor) {
+      window.quillEditor.setText(quoteHeader + originalText);
+      window.quillEditor.setSelection(0, 0);
+    }
+  } else {
+    // Replying to a received email: compose from the recipient address, to the original sender
+    const toAddr = msg.to_addr || '';
+    await showCompose(toAddr);
+    const senderEmail = (msg.sender || '').match(/<([^>]+)>/)?.[1] || msg.sender || '';
+    document.getElementById('compTo').value = senderEmail;
+    const subject = msg.subject || '';
+    document.getElementById('compSubject').value = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
+    const date = parseUtcDate(msg.received_at).toLocaleString();
+    const quoteHeader = '\n\n---------- ' + T('reply') + ' ----------\nFrom: ' + (msg.sender || '') + '\nDate: ' + date + '\nSubject: ' + (msg.subject || '') + '\n\n';
+    const originalText = msg.text_content || '';
+    if (window.quillEditor) {
+      window.quillEditor.setText(quoteHeader + originalText);
+      window.quillEditor.setSelection(0, 0);
+    }
   }
 }
 
@@ -2427,6 +2453,7 @@ async function openSentMessage(id) {
   try {
     const data = await api('/api/sent/' + id);
     const e = data.email;
+    currentMessageData = e;
     document.getElementById('detailEmpty').style.display = 'none';
     document.getElementById('detailContent').style.display = '';
     document.getElementById('detailSubject').textContent = e.subject || '(no subject)';
