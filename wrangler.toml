@@ -1,0 +1,42 @@
+name = "mailhub"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# D1 Database
+# database_id is auto-replaced by the deploy workflow (step: Get D1 database ID).
+# For local dev, set your own database_id here.
+[[d1_databases]]
+binding = "DB"
+database_name = "mailhub_db"
+database_id = "placeholder"
+
+# R2 Storage (attachments & raw EML files)
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "mailhub-storage"
+
+# Send Email binding (supports both legacy EmailMessage and new CF Email Service structured API)
+# remote = true enables the new CF Email Service for sending to any external address
+[[send_email]]
+name = "SEND_EMAIL"
+remote = true
+
+# Static assets
+[assets]
+directory = "public"
+
+# Environment variables (non-sensitive only)
+# Sensitive values (ADMIN_PASSWORD, ADMIN_USERNAME, JWT_SECRET, RESEND_API_KEY, CF_API_TOKEN_VAR)
+# are set as encrypted secrets via wrangler secret put in the deployment workflow
+#
+# Turnstile verification (optional):
+#   TURNSTILE_SITE_KEY - set in [vars] below (public, non-sensitive)
+#   TURNSTILE_SECRET_KEY - set via wrangler secret put (sensitive)
+#
+# Login credentials:
+#   ADMIN_USERNAME - default "admin" if not set
+#   ADMIN_PASSWORD - required
+[vars]
+WORKER_NAME = "mailhub"

@@ -1,0 +1,3533 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailHub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📧</text></svg>">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<style>
+/* ====== Reset & Variables ====== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f2f5;--bg2:#fff;--bg3:#f8f9fa;--bg-hover:#e8eaed;
+  --text:#1a1a2e;--text2:#555;--text3:#888;
+  --border:#e0e0e0;--border2:#d0d0d0;
+  --primary:#4361ee;--primary-hover:#3a56d4;--primary-light:#eef1ff;
+  --danger:#e74c3c;--danger-hover:#c0392b;
+  --success:#27ae60;--warning:#f39c12;
+  --shadow:0 2px 12px rgba(0,0,0,.08);--shadow2:0 4px 20px rgba(0,0,0,.12);
+  --radius:10px;--radius2:16px;
+  --sidebar-w:280px;--topbar-h:56px;
+  --glass:rgba(255,255,255,.7);--glass-border:rgba(255,255,255,.3);
+}
+[data-theme=dark]{
+  --bg:#0f0f1a;--bg2:#1a1a2e;--bg3:#16213e;--bg-hover:#1f2b47;
+  --text:#e0e0e0;--text2:#aaa;--text3:#777;
+  --border:#2a2a3e;--border2:#333;
+  --primary:#5c7cfa;--primary-hover:#4c6ef5;--primary-light:#1a1a3e;
+  --shadow:0 2px 12px rgba(0,0,0,.3);--shadow2:0 4px 20px rgba(0,0,0,.4);
+  --glass:rgba(26,26,46,.7);--glass-border:rgba(255,255,255,.08);
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:var(--primary);text-decoration:none}
+button{cursor:pointer;border:none;font:inherit;outline:none;transition:all .2s ease}
+input,textarea,select{font:inherit;outline:none;border:1px solid var(--border);border-radius:6px;padding:8px 12px;background:var(--bg2);color:var(--text);transition:border-color .2s ease, box-shadow .2s ease}
+input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.15)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ====== Login ====== */
+.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+[data-theme=dark] .login-wrap{background:linear-gradient(135deg,#1a1a3e 0%,#0f0f2a 100%)}
+.login-card{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--radius2);padding:48px 40px;width:380px;max-width:90vw;box-shadow:var(--shadow2);text-align:center}
+.login-card h1{font-size:28px;margin-bottom:8px;color:var(--text)}
+.login-card p{color:var(--text2);margin-bottom:28px}
+.login-card input{width:100%;padding:12px 16px;margin-bottom:16px;font-size:15px}
+.login-card .btn-primary{width:100%;padding:12px;font-size:15px;justify-content:center;text-align:center}
+.login-card .turnstile-wrap{display:flex;justify-content:center;margin-bottom:16px;min-height:0;transition:min-height .3s}
+.login-card .turnstile-wrap.active{min-height:65px}
+
+/* ====== Buttons ====== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:all .2s ease}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:0 2px 8px rgba(67,97,238,.3)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:var(--danger-hover)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg-hover)}
+.btn-ghost:disabled,.btn-ghost[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px;background:transparent;color:var(--text2);transition:all .2s ease}.btn-icon:hover{background:var(--bg-hover)}
+
+/* ====== Layout ====== */
+.app-wrap{display:none;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:all .2s ease}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sidebar-header h2{font-size:18px;font-weight:700}
+.sidebar-actions{display:flex;gap:6px}
+.sidebar-search{padding:8px 12px}
+.sidebar-search input{width:100%;padding:8px 12px;font-size:13px}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px 8px}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+
+/* Mailbox Items */
+.mbx-item{display:flex;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer;transition:all .15s ease;gap:10px;position:relative}
+.mbx-item:hover{background:var(--bg-hover)}
+.mbx-item.active{background:var(--primary-light);color:var(--primary)}
+.mbx-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;color:#fff;flex-shrink:0}
+.mbx-info{flex:1;min-width:0;overflow:hidden}
+.mbx-addr{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbx-meta{font-size:11px;color:var(--text3);display:flex;gap:6px;align-items:center}
+.mbx-badge{background:var(--primary);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;flex-shrink:0}
+.mbx-pin{color:var(--warning);font-size:12px}
+.mbx-fav{color:var(--danger);font-size:12px}
+.mbx-auto{background:var(--warning);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px}
+.mbx-actions{display:none;gap:2px;flex-shrink:0;background:var(--bg2);padding:2px 4px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-left:4px}
+.mbx-item:hover .mbx-actions{display:flex}
+.mbx-item:hover .mbx-badge{display:none}
+.mbx-item:hover .mbx-info{margin-right:0}
+
+/* ====== Main Area ====== */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:var(--topbar-h);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;background:var(--bg2)}
+.topbar-title{font-weight:600;font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.content{flex:1;display:flex;overflow:hidden}
+
+/* Folder Column */
+.folder-col{width:160px;border-right:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;flex-shrink:0;padding:8px 6px}
+.folder-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .15s ease;font-size:13px;font-weight:500;color:var(--text2);white-space:nowrap}
+.folder-item:hover{background:var(--bg-hover);color:var(--text)}
+.folder-item.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+.folder-item svg{flex-shrink:0}
+.folder-item .folder-count{margin-left:auto;font-size:11px;background:var(--bg3);color:var(--text3);padding:1px 6px;border-radius:10px;font-weight:600}
+.folder-item.active .folder-count{background:var(--primary);color:#fff}
+.folder-count.count-fail{background:var(--danger)!important;color:#fff!important}
+
+/* Message List */
+.msg-list-wrap{width:380px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg2)}
+.msg-list-toolbar{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.msg-list-toolbar input{flex:1;padding:6px 10px;font-size:13px}
+.msg-list{flex:1;overflow-y:auto}
+.msg-item{display:flex;gap:10px;padding:11px 14px 11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s ease;position:relative;border-left:3px solid transparent}
+.msg-item:hover{background:var(--bg-hover)}
+.msg-item.active{background:var(--primary-light);border-left-color:var(--primary)}
+.msg-item.unread{border-left-color:var(--primary)}
+.msg-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;flex-shrink:0}
+.msg-body{flex:1;min-width:0}
+.msg-sender{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.msg-item.unread .msg-sender{font-weight:700;color:var(--text)}
+.msg-preview{font-size:11.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;opacity:.8}
+.msg-from-to{display:flex;flex-direction:column;gap:1px;margin-top:3px;padding-top:4px;border-top:1px solid var(--border)}
+.msg-ft-row{display:flex;align-items:center;gap:5px;font-size:10.5px;min-width:0}
+.msg-ft-label{color:var(--text3);flex-shrink:0;width:30px;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.msg-ft-val{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+/* keep old class as alias */
+.msg-subject{font-size:13px;color:var(--text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.msg-time{font-size:11px;color:var(--text3);white-space:nowrap}
+.msg-code{background:#e8f5e9;color:#2e7d32;font-size:11px;padding:2px 6px;border-radius:4px;font-weight:600;cursor:pointer}
+[data-theme=dark] .msg-code{background:#1b3a1d;color:#66bb6a}
+.msg-unread-dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+
+/* Message Detail */
+.msg-detail-wrap{flex:1;overflow-y:auto;background:var(--bg3);display:flex;flex-direction:column}
+.msg-detail-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:15px}
+.msg-detail{padding:24px;max-width:900px;width:100%}
+.msg-detail-header{margin-bottom:20px}
+.msg-detail-subject{font-size:20px;font-weight:600;margin-bottom:12px}
+.msg-detail-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text2)}
+.msg-detail-code{display:inline-flex;align-items:center;gap:8px;background:#e8f5e9;color:#2e7d32;padding:8px 16px;border-radius:8px;font-size:18px;font-weight:700;margin:4px 6px 4px 0;cursor:pointer;transition:opacity .15s}
+.msg-detail-code:hover{opacity:.8}
+[data-theme=dark] .msg-detail-code{background:#1b3a1d;color:#66bb6a}
+.detail-link-btn{position:relative;display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;margin:4px 8px 4px 0;cursor:pointer;text-decoration:none;transition:opacity .15s}
+.detail-link-btn:hover{opacity:.85}
+.detail-link-tooltip{display:none;position:absolute;left:0;top:calc(100% + 6px);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:400;color:var(--text2);word-break:break-all;white-space:normal;max-width:380px;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.detail-link-btn:hover .detail-link-tooltip{display:block}
+.detail-code-area{padding:10px 0 4px}
+.detail-code-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.msg-detail-body{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;line-height:1.7}
+.msg-detail-body iframe{width:100%;border:none;min-height:300px}
+.msg-attachments{margin-top:16px}
+.att-item{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin:4px;font-size:12px;cursor:pointer;transition:all .2s ease}
+.att-item:hover{background:var(--primary-light);border-color:var(--primary)}
+.att-item .att-icon{font-size:14px}
+.eml-download{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;margin-top:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;color:var(--text2);transition:background .2s}
+.eml-download:hover{background:var(--primary-light);color:var(--primary)}
+
+/* ====== Compose Modal ====== */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;transition:opacity .2s ease}
+.modal-overlay.show{display:flex;opacity:1}
+.modal{background:var(--bg2);border-radius:var(--radius2);width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow2);border:1px solid var(--glass-border)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:16px;font-weight:600}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* Form */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase}
+.form-group input,.form-group select,.form-group textarea{width:100%}
+.form-row{display:flex;gap:12px}.form-row .form-group{flex:1}
+.toggle{position:relative;width:44px;height:24px;display:inline-block}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:12px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s}
+.toggle input:checked+.toggle-slider{background:var(--primary)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(20px)}
+
+/* Quill overrides */
+.ql-toolbar.ql-snow{border-color:var(--border);border-radius:6px 6px 0 0;background:var(--bg3)}
+.ql-container.ql-snow{border-color:var(--border);border-radius:0 0 6px 6px;background:var(--bg2);color:var(--text)}
+.ql-editor{min-height:200px;font-size:14px;line-height:1.6}
+.ql-editor.ql-blank::before{color:var(--text3)}
+
+/* ====== Pages: Domains, Settings, Sent ====== */
+.page{display:none;padding:24px;overflow-y:auto;flex:1}
+.page.active{display:block}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow);transition:box-shadow .2s ease}
+.card:hover{box-shadow:var(--shadow2)}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;transition:transform .2s ease,box-shadow .2s ease}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow2)}
+.stat-value{font-size:28px;font-weight:700;color:var(--primary)}
+.stat-label{font-size:12px;color:var(--text3);margin-top:4px;text-transform:uppercase}
+.domain-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.domain-item:last-child{border-bottom:none}
+.domain-name{font-weight:500}
+.domain-status{font-size:12px;padding:3px 8px;border-radius:4px}
+.domain-status.verified{background:#e8f5e9;color:#2e7d32}
+.domain-status.pending{background:#fff3e0;color:#e65100}
+[data-theme=dark] .domain-status.verified{background:#1b3a1d;color:#66bb6a}
+[data-theme=dark] .domain-status.pending{background:#3e2700;color:#ffb74d}
+.settings-section{margin-bottom:24px}
+.settings-section h4{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+/* ====== Delivery Status Card ====== */
+.delivery-card{position:fixed;bottom:24px;right:20px;width:300px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow2);z-index:9990;overflow:hidden;animation:toastIn .3s ease}
+.delivery-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.delivery-card-body{padding:12px 14px}
+.delivery-status-row{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;min-height:22px}
+.delivery-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.delivery-bar-fill{height:100%;border-radius:3px;background:var(--primary);transition:width .8s ease,background .5s ease}
+.delivery-detail{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5;word-break:break-word}
+
+/* ====== Quota Bars ====== */
+.quota-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.quota-label{font-size:12px;color:var(--text3);width:38px;flex-shrink:0}
+.quota-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.quota-bar-fill{height:100%;border-radius:3px;background:var(--primary);transition:width .5s ease,background .3s}
+.quota-count{font-size:12px;color:var(--text2);min-width:72px;text-align:right;flex-shrink:0}
+
+/* ====== Toast ====== */
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:8px;font-size:13px;color:#fff;box-shadow:var(--shadow2);animation:toastIn .3s ease;max-width:360px}
+.toast.success{background:#27ae60}
+.toast.error{background:#e74c3c}
+.toast.info{background:var(--primary)}
+.toast.warning{background:var(--warning)}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{from{opacity:.5}to{opacity:1}}
+
+/* ====== Responsive ====== */
+@media(max-width:900px){
+  .sidebar{position:fixed;left:-100%;top:0;z-index:100;transition:.3s;width:85vw;max-width:320px}
+  .sidebar.open{left:0}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+  .sidebar-overlay.show{display:block}
+  .folder-col{width:100%;border-right:none;border-bottom:1px solid var(--border);flex-direction:row;overflow-x:auto;padding:4px 8px;flex-shrink:0}
+  .folder-item{padding:6px 10px;font-size:12px}
+  .msg-list-wrap{width:100%}
+  .content{flex-direction:column}
+  .msg-detail-wrap{position:fixed;inset:0;z-index:50;background:var(--bg3)}
+  .mobile-back{display:flex!important}
+}
+@media(min-width:901px){
+  .mobile-menu-btn{display:none!important}
+  .mobile-back{display:none!important}
+}
+</style>
+</head>
+<body>
+<!-- Inline script to prevent login flash -->
+<script>
+(function(){
+  var t = localStorage.getItem('mailhub_token');
+  // Write initial display states inline so there's no flash
+  document.write('<style>#loginView{display:'+(t?'none':'flex')+'} #appView{display:'+(t?'flex':'none')+'}</style>');
+})();
+</script>
+
+<!-- Login -->
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <h1 data-i18n="login_title">MailHub</h1>
+    <p data-i18n="login_subtitle">Email Service Dashboard</p>
+    <input type="text" id="loginUsername" data-i18n="login_username_placeholder" placeholder="Username" autocomplete="username">
+    <input type="password" id="loginPassword" data-i18n="login_placeholder" placeholder="Enter password" autocomplete="current-password">
+    <div class="turnstile-wrap" id="turnstileWrap"></div>
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()" data-i18n="login_btn">Login</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="appView" class="app-wrap">
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>MailHub</h2>
+      <div class="sidebar-actions">
+        <button class="btn-icon" onclick="showCreateMailbox()" title="Create mailbox">+</button>
+      </div>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" id="mbxSearch" data-i18n="search_mailboxes" placeholder="Search mailboxes..." oninput="filterMailboxes()">
+    </div>
+    <div id="setupGuideCard" style="display:none;margin:8px;padding:12px;background:var(--primary-light);border-radius:8px;font-size:12px;color:var(--primary);line-height:1.6">
+      <b data-i18n="setup_guide_title">Setup Guide</b><br>
+      <span data-i18n="setup_guide_step1">1. ...</span>
+    </div>
+    <div style="padding:4px 8px">
+      <div class="mbx-item" id="mbxAllInbox" onclick="selectMailbox(null)" style="background:var(--primary-light);border-radius:8px">
+        <div class="mbx-avatar" style="background:var(--primary)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="mbx-info">
+          <div class="mbx-addr" data-i18n="all_inbox">All Inboxes</div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="sidebar-list" id="mbxList"></div>
+    <div class="sidebar-footer">
+      <div style="display:flex;gap:6px">
+        <button class="btn-icon" onclick="navigate('mail')" title="Mail">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </button>
+        <button class="btn-icon" onclick="navigate('domains')" title="Domains">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </button>
+        <button class="btn-icon" onclick="navigate('settings')" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-icon" onclick="toggleLang()" id="langBtn" data-i18n-title="toggle_lang" title="Toggle language" style="font-size:12px;font-weight:700">EN</button>
+        <button class="btn-icon" onclick="toggleTheme()" id="themeBtn" data-i18n-title="toggle_theme" title="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="btn-icon" onclick="doLogout()" data-i18n-title="logout" title="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <button class="btn-icon mobile-menu-btn" onclick="toggleSidebar()" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title" id="topbarTitle">Inbox</div>
+      <button class="btn btn-primary btn-sm" onclick="showCompose()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span data-i18n="compose">Compose</span>
+      </button>
+    </div>
+
+    <div class="content">
+      <!-- Folder Column -->
+      <div class="folder-col" id="folderCol">
+        <div class="folder-item active" data-folder="inbox" onclick="switchFolder('inbox')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span data-i18n="inbox">Inbox</span>
+          <span class="folder-count" id="folderInboxCount" style="display:none">0</span>
+        </div>
+        <div class="folder-item" data-folder="sent" onclick="switchFolder('sent')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <span data-i18n="sent">Sent</span>
+          <span class="folder-count" id="folderSentCount" style="display:none">0</span>
+          <span class="folder-count count-fail" id="folderSentFailCount" style="display:none" title="Bounced / Complained">!</span>
+        </div>
+        <div class="folder-item" data-folder="favorites" onclick="switchFolder('favorites')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span data-i18n="favorite">Favorites</span>
+          <span class="folder-count" id="folderFavCount" style="display:none">0</span>
+        </div>
+        <div class="folder-item" data-folder="deleted" onclick="switchFolder('deleted')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span data-i18n="deleted">Deleted</span>
+          <span class="folder-count" id="folderDeletedCount" style="display:none">0</span>
+        </div>
+      </div>
+
+      <!-- Message List -->
+      <div id="inboxView" class="msg-list-wrap">
+        <div class="msg-list-toolbar">
+          <input type="text" id="msgSearch" data-i18n="search_emails" placeholder="Search emails..." onkeydown="if(event.key==='Enter')searchMessages()">
+          <button class="btn-icon" onclick="searchMessages()" title="Search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button class="btn-icon" onclick="loadCurrentFolder()" title="Refresh">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="btn-icon" onclick="markAllRead()" title="Mark all as read">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/><polyline points="20 12 9 23 4 18" opacity="0.4"/></svg>
+          </button>
+        </div>
+        <div class="msg-list" id="msgList"></div>
+      </div>
+
+      <!-- Message Detail -->
+      <div id="detailView" class="msg-detail-wrap">
+        <div class="msg-detail-empty" id="detailEmpty" data-i18n="select_email">Select an email to read</div>
+        <div class="msg-detail" id="detailContent" style="display:none">
+          <button class="btn btn-ghost btn-sm mobile-back" onclick="closeDetail()" style="display:none;margin-bottom:12px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back
+          </button>
+          <div class="msg-detail-header">
+            <div class="msg-detail-subject" id="detailSubject"></div>
+            <div class="msg-detail-meta">
+              <span>From: <strong id="detailFrom"></strong></span>
+              <span>To: <strong id="detailTo"></strong></span>
+              <span id="detailTime"></span>
+              <span id="detailSentBadge" style="display:none"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+              <button id="detailReplyBtn" class="btn btn-ghost btn-sm" onclick="replyToMessage()" style="display:none">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                <span data-i18n="reply">Reply</span>
+              </button>
+              <button id="detailFavBtn" class="btn btn-ghost btn-sm" title="Favorite" style="display:none">
+                <span id="detailFavIcon">&#9825;</span> <span data-i18n="favorite">Favorite</span>
+              </button>
+              <button id="sentCheckStatusBtn" class="btn btn-ghost btn-sm" style="display:none"></button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteCurrentMsg()" style="color:var(--danger);border-color:var(--danger)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span data-i18n="delete">Delete</span>
+              </button>
+            </div>
+          </div>
+          <div id="detailCode" style="display:none"></div>
+          <div id="detailAttachments" class="msg-attachments" style="display:none"></div>
+          <div class="msg-detail-body" id="detailBody"></div>
+        </div>
+      </div>
+
+      <!-- Domains Page -->
+      <div id="domainsPage" class="page">
+        <div class="page-title" data-i18n="domains">Domain Management</div>
+        <div class="card">
+          <div class="card-title" data-i18n="add_domain">Add Domain</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="newDomainSelect" style="flex:1;min-width:150px"><option value="">Loading zones...</option></select>
+            <input type="text" id="customSubdomain" placeholder="subdomain (optional)" style="flex:1;min-width:120px;display:none">
+            <button class="btn btn-primary" id="addDomainBtn" onclick="enableDomain()">Add</button>
+          </div>
+          <p id="domainInputHint" style="font-size:11px;color:var(--text3);margin:4px 0 0;display:none" data-i18n="subdomain_hint">Optional: enter a subdomain prefix (e.g. "mail") to add mail.example.com instead of example.com</p>
+          <div id="domainProgress" style="display:none;margin-top:12px;padding:12px;background:var(--bg3);border-radius:8px;font-size:13px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" data-i18n="configured_domains">Configured Domains</div>
+          <div id="domainList"></div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settingsPage" class="page">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div id="quotaInfo" style="margin-bottom:16px"></div>
+        <!-- Quota Settings — placed right after quota display -->
+        <div class="card settings-section" id="quotaSettingsCard">
+          <h4 data-i18n="quota_limits_title">Sending Quota Limits</h4>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:16px" data-i18n="quota_limits_desc">Used for progress bar display only — does not affect actual sending. Leave blank for unlimited. Set to your account's actual limits.</p>
+          <!-- Resend quota inputs -->
+          <div id="resendQuotaGroup">
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+              <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Resend</span>
+              <span style="font-size:11px;color:var(--text3)" data-i18n="resend_quota_hint">免费计划：100/天，3,000/月</span>
+            </div>
+            <div id="resendQuotaNotice" style="display:none;font-size:12px;color:var(--warning);margin-bottom:8px;padding:6px 10px;background:var(--bg3);border-radius:6px"></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label data-i18n="resend_day_limit_label">Resend Daily Limit</label>
+                <input type="number" id="s_resend_day_limit" min="1" data-i18n-placeholder="quota_leave_blank" placeholder="留空=无限制">
+              </div>
+              <div class="form-group">
+                <label data-i18n="resend_month_limit_label">Resend Monthly Limit</label>
+                <input type="number" id="s_resend_month_limit" min="1" data-i18n-placeholder="quota_leave_blank" placeholder="留空=无限制">
+              </div>
+            </div>
+          </div>
+          <!-- CF Email quota inputs -->
+          <div id="cfQuotaGroup" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+              <span style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">CF Email</span>
+              <span style="font-size:11px;color:var(--text3)" data-i18n="cf_quota_hint">约 200/天（免费用量，以实际账户为准）</span>
+            </div>
+            <div id="cfQuotaNotice" style="display:none;font-size:12px;color:var(--warning);margin-bottom:8px;padding:6px 10px;background:var(--bg3);border-radius:6px"></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label data-i18n="cf_day_limit_label">CF Email Daily Limit</label>
+                <input type="number" id="s_cf_day_limit" min="1" data-i18n-placeholder="quota_leave_blank" placeholder="留空=无限制">
+              </div>
+              <div class="form-group">
+                <label data-i18n="cf_month_limit_label">CF Email Monthly Limit</label>
+                <input type="number" id="s_cf_month_limit" min="1" data-i18n-placeholder="quota_leave_blank" placeholder="留空=无限制">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card settings-section">
+          <h4 data-i18n="api_config">API Configuration</h4>
+          <div class="form-group">
+            <label data-i18n="domain_provider_label">Domain Provider</label>
+            <select id="s_domain_provider" style="width:100%">
+              <option value="resend" data-i18n="domain_provider_resend">Resend (third-party)</option>
+              <option value="cf" data-i18n="domain_provider_cf">Cloudflare Email Service</option>
+            </select>
+            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="domain_provider_desc">Controls how domains are onboarded for sending. Resend uses Resend API. CF Email Service uses Cloudflare's native email sending (public beta).</p>
+          </div>
+          <div class="form-group"><label data-i18n="cf_api_token">Cloudflare API Token</label><input type="password" id="s_cf_api_token">
+            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="cf_api_token_desc">Required for domain DNS management and email routing setup. Token needs permissions: <b>Zone:Read</b>, <b>DNS:Edit</b>, <b>Email Routing Rules:Edit</b>, <b>Email Routing Addresses:Edit</b>, <b>Email Sending:Edit</b> (All zones). ⚠️ This is a <b>runtime</b> token used by the worker — it is <b>different</b> from the <code>CF_API_TOKEN</code> GitHub Actions secret used for deployment.</p>
+          </div>
+          <div class="form-group" id="resend_key_group"><label data-i18n="resend_api_key">Resend API Key</label><input type="password" id="s_resend_api_key"></div>
+          <div class="form-group">
+            <label data-i18n="send_method_title">Send Method</label>
+            <select id="s_send_method" style="width:100%">
+              <option value="auto" data-i18n="send_method_auto">Auto (CF Email Service priority)</option>
+              <option value="cf_email_service" data-i18n="send_method_cf_es">CF Email Service (recommended)</option>
+              <option value="resend" data-i18n="send_method_resend_only">Resend only</option>
+            </select>
+            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="send_method_desc">Choose how outbound emails are sent. CF Email Service is recommended (auto-configured). Resend requires a separate API key.</p>
+          </div>
+        </div>
+        <div class="card settings-section">
+          <h4 data-i18n="telegram_notification">Telegram Notification</h4>
+          <div class="form-row">
+            <div class="form-group"><label data-i18n="bot_token">Bot Token</label><input type="password" id="s_tg_bot_token"></div>
+            <div class="form-group"><label data-i18n="chat_id">Chat ID</label><input type="text" id="s_tg_chat_id"></div>
+          </div>
+          <div class="form-group"><label data-i18n="topic_id">Topic ID (optional)</label><input type="text" id="s_tg_topic_id"></div>
+        </div>
+        <div class="card settings-section">
+          <h4 data-i18n="email_forwarding">Email Forwarding</h4>
+          <div class="form-group"><label data-i18n="forward_to">Forward To (global)</label><input type="email" id="s_forward_to" placeholder="your@email.com"></div>
+        </div>
+        <div class="card settings-section">
+          <h4 data-i18n="auto_create_mailbox">Auto-Create Mailbox</h4>
+          <p data-i18n="auto_create_desc" style="font-size:12px;color:var(--text3);margin:-8px 0 12px">When enabled, incoming emails to non-existent addresses under your domains will automatically create a new mailbox. Works with Email Routing catch-all rules for receiving all emails without pre-creating addresses.</p>
+          <div class="form-group" style="display:flex;align-items:center;gap:12px">
+            <label style="margin:0" data-i18n="enable">Enable</label>
+            <label class="toggle"><input type="checkbox" id="s_auto_create_enabled"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label data-i18n="min_length">Min Length</label><input type="number" id="s_auto_create_min_length" value="3" min="1"></div>
+            <div class="form-group"><label data-i18n="max_length">Max Length</label><input type="number" id="s_auto_create_max_length" value="30" min="1"></div>
+          </div>
+        </div>
+        <div class="card settings-section">
+          <h4 data-i18n="webhook">Webhook</h4>
+          <div class="form-group">
+            <label data-i18n="inbound_webhook_url">Inbound Webhook URL</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="webhookUrl" readonly style="background:var(--bg3);flex:1">
+              <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('webhookUrl').value).then(()=>toast(T('copied'),'success'))" title="Copy">&#x2398;</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.6">
+            <b data-i18n="resend_inbound_title">Resend Inbound (receive via Resend):</b>
+            <span data-i18n="resend_inbound_desc"> Go to Resend → Domains → Inbound → point the webhook to the URL above. This lets Resend deliver incoming emails to MailHub without using Cloudflare Email Routing.</span>
+          </div>
+          <div class="form-group" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <label data-i18n="resend_events_url_label">Resend Delivery Events Webhook URL</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="resendEventsUrl" readonly style="background:var(--bg3);flex:1">
+              <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('resendEventsUrl').value).then(()=>toast(T('copied'),'success'))" title="Copy">&#x2398;</button>
+            </div>
+            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="resend_events_url_desc">In Resend Dashboard → Webhooks → Add Endpoint, paste this URL and select events: email.delivered / email.bounced / email.delivery_delayed / email.complained. Copy the Signing Secret and paste below.</p>
+          </div>
+          <div class="form-group">
+            <label data-i18n="resend_webhook_secret_label">Resend Webhook Signing Secret</label>
+            <input type="password" id="s_resend_webhook_secret" data-i18n-placeholder="resend_webhook_secret_placeholder" placeholder="whsec_...">
+            <p style="font-size:11px;color:var(--text3);margin:4px 0 0" data-i18n="resend_webhook_secret_desc">Found in Resend → Webhooks → your endpoint → Signing Secret. Used to verify that webhook requests are genuinely from Resend.</p>
+          </div>
+        </div>
+        <div class="card settings-section">
+          <h4 data-i18n="change_password">Change Password</h4>
+          <div class="form-group"><label data-i18n="username">Username</label><input type="text" id="s_new_username" data-i18n="username_placeholder" placeholder="New username (at least 2 characters)"></div>
+          <div class="form-group"><label data-i18n="current_password">Current Password</label><input type="password" id="s_current_pw"></div>
+          <div class="form-group"><label data-i18n="new_password">New Password</label><input type="password" id="s_new_pw" data-i18n="new_password_placeholder" placeholder="At least 6 characters"></div>
+          <button class="btn btn-primary" onclick="changePassword()" data-i18n="change_password">Change Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compose Modal -->
+<div class="modal-overlay" id="composeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 data-i18n="compose">Compose Email</h3>
+      <button class="btn-icon" onclick="hideCompose()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label data-i18n="from">From</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="compFrom" style="flex:1"></select>
+          <button class="btn btn-ghost btn-sm" onclick="randomizeFromAddr()" title="Random prefix">&#x1F3B2;</button>
+        </div>
+      </div>
+      <div class="form-group"><label data-i18n="to">To</label><input type="text" id="compTo" placeholder="recipient@example.com"></div>
+      <div class="form-row">
+        <div class="form-group"><label data-i18n="cc">CC</label><input type="text" id="compCc" placeholder="cc@example.com"></div>
+        <div class="form-group"><label data-i18n="bcc">BCC</label><input type="text" id="compBcc" placeholder="bcc@example.com"></div>
+      </div>
+      <div class="form-group"><label data-i18n="subject">Subject</label><input type="text" id="compSubject"></div>
+      <div class="form-group"><label data-i18n="content">Content</label><div id="compBody" style="height:250px"></div></div>
+      <div class="form-group">
+        <label data-i18n="attachments_label">Attachments</label>
+        <div id="compAttachments" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:.2s" onclick="document.getElementById('compFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleFileDrop(event)">
+          <input type="file" id="compFileInput" multiple style="display:none" onchange="handleFileSelect(this.files)">
+          <div style="color:var(--text3);font-size:13px" data-i18n="drop_files">Click or drag files here</div>
+        </div>
+        <div id="compFileList" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="hideCompose()" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" onclick="sendEmail()" data-i18n="send">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Mailbox Modal -->
+<div class="modal-overlay" id="createMbxModal">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <h3 data-i18n="create_mailbox">Create Mailbox</h3>
+      <button class="btn-icon" onclick="hideCreateMailbox()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label data-i18n="address">Address</label>
+          <div style="display:flex;gap:4px">
+            <input type="text" id="newMbxLocal" placeholder="username" style="flex:1">
+            <button class="btn btn-ghost btn-sm" onclick="randomizeMailboxPrefix()" title="Random">&#x1F3B2;</button>
+          </div>
+        </div>
+        <div style="padding-top:22px;font-size:16px;color:var(--text2)">@</div>
+        <div class="form-group" style="flex:2"><label data-i18n="domain">Domain</label><select id="newMbxDomain"></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="hideCreateMailbox()" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" onclick="createMailbox()" data-i18n="create">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ====== State ====== */
+let token = localStorage.getItem('mailhub_token');
+let mailboxes = [];
+let currentMailboxId = null;
+let currentMessages = [];
+let currentMessageId = null;
+let currentPage = 1;
+let totalPages = 1;
+let sentPage = 1;
+let sentTotalPages = 1;
+let currentView = 'mail';
+let currentFolder = 'inbox';
+let autoRefreshTimer = null;
+let turnstileSiteKey = '';
+let turnstileWidgetId = null;
+let currentDetailType = null;
+let currentMessageData = null;
+let composeAttachments = [];
+let isSearchMode = false;
+
+/* ====== i18n ====== */
+const i18n = {
+  zh: {
+    login_title: 'MailHub',
+    login_subtitle: '邮件服务管理系统',
+    login_placeholder: '请输入密码',
+    login_username_placeholder: '请输入用户名',
+    login_btn: '登录',
+    setup_guide_title: '快速开始指南',
+    setup_guide_step1: '1. 进入「设置」页面，选择域名服务商并配置 API Token。',
+    setup_guide_step2: '2. 确保 API Token 拥有 Zone:Read, DNS:Edit 等权限。',
+    setup_guide_step3: '3. 添加域名后，系统将自动配置 DNS 和路由。',
+    setup_guide_step4: '4. 创建邮箱后即可开始收发邮件。',
+    inbox: '收件箱',
+    all_inbox: '全部收件箱',
+    sent: '已发送',
+    deleted: '已删除',
+    favorite: '收藏',
+    domains: '域名管理',
+    settings: '设置',
+    compose: '写邮件',
+    search_mailboxes: '搜索邮箱...',
+    search_emails: '搜索邮件...',
+    no_emails: '暂无邮件',
+    no_subject: '(无主题)',
+    from: '发件人',
+    to: '收件人',
+    cc: '抄送',
+    bcc: '密送',
+    subject: '主题',
+    content: '正文',
+    send: '发送',
+    cancel: '取消',
+    delete: '删除',
+    create: '创建',
+    remove: '移除',
+    save: '保存设置',
+    copy: '复制',
+    copied: '已复制',
+    code_copied: '验证码已复制',
+    verification_code: '验证码',
+    click_to_copy: '点击复制',
+    identify_btn: '识别',
+    identify_codes_label: '验证码',
+    identify_links_label: '激活链接',
+    identify_none: '未识别到验证码或激活链接',
+    attachments: '附件',
+    attachments_label: '附件',
+    drop_files: '点击或拖拽文件到此处',
+    random_prefix: '随机前缀',
+    download_eml: '下载 EML',
+    create_mailbox: '创建邮箱',
+    address: '地址',
+    domain: '域名',
+    no_domains: '未配置域名',
+    select_email: '选择一封邮件查看',
+    delete_mailbox_confirm: '确定删除该邮箱及其所有邮件？',
+    delete_email_confirm: '确定删除这封邮件？',
+    remove_domain_confirm: '确定移除该域名？',
+    mailbox_created: '邮箱已创建',
+    mailbox_deleted: '邮箱已删除',
+    email_sent: '邮件已发送',
+    email_sent_note: '邮件已提交给发送服务商。对方拦截/退信属异步事件，页面无法实时感知。',
+    email_deleted: '邮件已删除',
+    domain_removed: '域名已移除',
+    fill_fields: '请填写所有字段',
+    from_to_required: '发件人和收件人为必填项',
+    add_domain: '添加域名',
+    select_domain: '-- 选择域名 --',
+    all_domains_added: '所有域名已添加',
+    no_cf_zones: '未找到 CF 域名（请检查 API Token）',
+    add: '添加',
+    configured_domains: '已配置域名',
+    no_domains_configured: '暂无域名，请在上方下拉选择添加。',
+    no_mailboxes: '请先创建邮箱',
+    auto_verifying: '自动验证中...',
+    dns: 'DNS',
+    domain_setup_complete: '域名配置完成，等待 DNS 验证...',
+    select_a_domain: '请选择一个域名',
+    step_resend: '添加到 Resend...',
+    step_cf_send: '添加到 CF Email Service...',
+    step_dns: '创建 DNS 记录...',
+    step_routing: '配置 Email Routing...',
+    step_verify: '触发验证...',
+    done: '完成',
+    failed: '失败',
+    setting_up: '配置中...',
+    api_config: 'API 配置',
+    resend_api_key: 'Resend API Key',
+    cf_api_token: 'Cloudflare API Token',
+    domain_provider_label: '域名服务商',
+    domain_provider_resend: 'Resend（第三方）',
+    domain_provider_cf: 'Cloudflare Email Service',
+    domain_provider_desc: '控制域名发信的配置方式。Resend 使用第三方 API。CF Email Service 使用 Cloudflare 原生邮件发送（公测中）。',
+    telegram_notification: 'Telegram 通知',
+    bot_token: 'Bot Token',
+    chat_id: 'Chat ID',
+    topic_id: 'Topic ID（可选）',
+    email_forwarding: '邮件转发',
+    forward_to: '转发地址（全局）',
+    auto_create_mailbox: '自动创建邮箱',
+    auto_create_desc: '启用后，发送到您域名下不存在地址的邮件将自动创建对应邮箱。适用于不需要手动创建每个地址的场景，配合 Email Routing 的 catch-all 规则使用。',
+    send_method_title: '发信方式',
+    send_method_desc: '选择发送邮件的方式。推荐使用 CF Email Service（自动配置）。Resend 需要单独的 API Key。',
+    send_method_auto: '自动（优先 CF Email Service）',
+    send_method_cf_es: 'CF Email Service（推荐）',
+    send_method_resend_only: '仅 Resend',
+    send_method_cf_only: 'Cloudflare 原生（旧版）',
+    att_still_loading: '附件还在读取中，请稍候',
+    att_has_error: '有附件读取失败，请移除后重试',
+    sending: '发送中',
+    enable: '启用',
+    min_length: '最小长度',
+    max_length: '最大长度',
+    webhook: 'Webhook',
+    inbound_webhook_url: 'Inbound Webhook URL',
+    change_password: '修改密码',
+    current_password: '当前密码',
+    new_password: '新密码',
+    new_password_placeholder: '至少6个字符',
+    password_changed: '密码已修改',
+    fill_both: '请填写两个字段',
+    settings_saved: '设置已保存',
+    configured: '已配置',
+    not_configured: '未配置',
+    mailboxes_stat: '邮箱',
+    received: '已收',
+    unread: '未读',
+    sent_stat: '已发',
+    r2_files: 'R2 文件',
+    toggle_theme: '切换主题',
+    toggle_lang: '切换语言',
+    logout: '退出登录',
+    pinned: '已置顶',
+    page_info: '第 {page} / {total} 页（共 {count} 条）',
+    search_results: '搜索到 {count} 条结果',
+    dns_records_for: 'DNS 记录：',
+    created_records: '已创建',
+    existed_records: '已存在',
+    updated: '已更新',
+    no_cf_token: 'CF Token 未配置',
+    already_configured: '已配置',
+    routing_enabled_configuring: '路由已启用，配置中...',
+    routing_already_enabled: '路由已启用',
+    routing_newly_enabled: '路由已开启',
+    domain_setup_partial: '域名配置部分完成，请检查错误信息',
+    no_records_returned: 'Resend 尚未返回 DNS 记录',
+    catch_all_wrong_type: 'Catch-all 未指向 Worker（当前类型：{type}），请在 CF 面板中修改 Catch-all 规则为"发送到 Worker"并选择对应 Worker',
+    catch_all_not_set: 'Catch-all 未配置，请在 CF 面板 Email Routing 中添加 Catch-all 规则，类型选"发送到 Worker"',
+    mx_not_set: 'MX 记录不足，请确保域名有 3 条 *.mx.cloudflare.net MX 记录',
+    routing_not_enabled: 'Email Routing 未启用，请在 CF 面板中手动启用',
+    turnstile_error: '请完成人机验证',
+    username: '用户名',
+    username_placeholder: '新用户名（至少2个字符）',
+    mail: '邮件',
+    sent_label: '已发送',
+    no_deleted: '回收站为空',
+    no_favorites_mailbox: '暂无收藏邮箱',
+    trash_restore: '恢复',
+    trash_restore_all: '全部恢复',
+    trash_permanent_delete: '彻底删除',
+    trash_clear_all: '全部清空',
+    trash_clear_confirm: '确定要彻底清空回收站中的所有邮件吗？此操作不可撤销。',
+    trash_permanent_confirm: '确定要彻底删除这些邮件吗？此操作不可撤销。',
+    trash_restored: '已恢复',
+    trash_deleted: '已彻底删除',
+    trash_cleared: '回收站已清空',
+    trash_type_inbox: '收件',
+    trash_type_sent: '发件',
+    trash_stat: '回收站',
+    no_favorites: '暂无收藏邮件',
+    send_method_resend: '通过 Resend 发送',
+    send_method_cf: '通过 CF 发送',
+    send_method_cf_es: '通过 CF Email Service 发送',
+    no_send_method: '未配置发送方式',
+    setup_guide_title: '快速开始指南',
+    setup_guide_step1: '1. 进入「设置」页面，选择域名服务商（Resend 或 CF Email Service）',
+    setup_guide_step2: '2. 填写 Cloudflare API Token（需要权限：Zone:Read、DNS:Edit、Email Routing Rules:Edit、Email Sending:Edit）',
+    setup_guide_step3: '3. 如选 Resend 服务商，还需填写 Resend API Key',
+    setup_guide_step4: '4. 保存后回到此页面，从下拉框选择域名并添加，系统将自动配置 DNS 和 Email Routing',
+    subdomain_hint: '可选：输入子域名前缀（如 "mail"），将添加 mail.example.com 而非 example.com',
+    cf_api_token_desc: '域名 DNS 管理和 Email Routing 配置必需。Token 需要权限：Zone:Read、DNS:Edit、Email Routing Rules:Edit、Email Routing Addresses:Edit、Email Sending:Edit（所有区域）。⚠️ 这是 Worker <b>运行时</b>使用的 Token，与用于部署的 GitHub Actions <code>CF_API_TOKEN</code> Secret <b>不同</b>。',
+    email_quota: '邮件配额',
+    quota_remaining: '剩余',
+    quota_used: '已用',
+    quota_today: '今日',
+    quota_month: '本月',
+    quota_limits_title: '发送配额限制',
+    quota_limits_desc: '仅用于进度条显示，不影响实际发送。留空表示无限制。请按账号实际额度填写。',
+    quota_not_configured: '未配置（需先配置此服务）',
+    quota_unlimited: '无限制',
+    quota_leave_blank: '留空=无限制',
+    quota_loading: '加载中…',
+    resend_quota_hint: '免费计划：100/天，3,000/月',
+    cf_quota_hint: '约 200/天（以实际账户为准）',
+    resend_day_limit_label: 'Resend 每日限额',
+    resend_month_limit_label: 'Resend 每月限额',
+    cf_day_limit_label: 'CF Email 每日限额',
+    cf_month_limit_label: 'CF Email 每月限额',
+    session_expired: '会话已过期，请重新登录',
+    quota_not_configured_resend: '请先配置 Resend API Key',
+    quota_not_configured_cf: 'CF Email 发件为付费功能，请先配置 CF API Token 并验证可用性',
+    resend_inbound_title: 'Resend 收件（Resend inbound）',
+    resend_inbound_desc: '在 Resend → Domains → Inbound 里，将 Webhook 指向上方 URL，即可通过 Resend 接收邮件，无需 Cloudflare Email Routing。',
+    resend_events_url_label: 'Resend 投递状态 Webhook URL',
+    resend_events_url_desc: '在 Resend Dashboard → Webhooks → Add Endpoint，粘贴此 URL，选择事件：email.delivered / email.bounced / email.delivery_delayed / email.complained。把 Signing Secret 复制到下方。',
+    resend_webhook_secret_label: 'Resend Webhook 签名密钥',
+    resend_webhook_secret_desc: '在 Resend → Webhooks → 你的端点 → Signing Secret 复制。用于验证 Webhook 请求来自 Resend。',
+    resend_webhook_secret_placeholder: 'whsec_...',
+    status_sent: '已发送',
+    status_delivered: '已投递',
+    status_bounced: '退信',
+    status_delayed: '延迟',
+    status_complained: '垃圾举报',
+    status_clicked: '已点击',
+    status_opened: '已读',
+    check_status: '查询投递状态',
+    status_updated: '状态已更新',
+    checking: '查询中',
+    delivery_status: '投递状态',
+    sending_email: '发送中…',
+    checking_delivery: '查询投递状态…',
+    delivery_timeout: '已发送（未获取投递确认）',
+    send_failed: '发送失败',
+    new_mail_arrived: '收到新邮件',
+    mark_all_read_success: '已全部标记为已读',
+    reply: '回复',
+  },
+  en: {
+    login_title: 'MailHub',
+    login_subtitle: 'Email Service Dashboard',
+    login_placeholder: 'Enter password',
+    login_username_placeholder: 'Username',
+    login_btn: 'Login',
+    setup_guide_title: 'Quick Start Guide',
+    setup_guide_step1: '1. Go to Settings, choose provider and configure API Token.',
+    setup_guide_step2: '2. Ensure Token has Zone:Read, DNS:Edit permissions.',
+    setup_guide_step3: '3. Add domain and system will auto-configure DNS/Routing.',
+    setup_guide_step4: '4. Create mailbox to start sending/receiving.',
+    inbox: 'Inbox',
+    all_inbox: 'All Inboxes',
+    sent: 'Sent',
+    deleted: 'Deleted',
+    favorite: 'Favorites',
+    domains: 'Domains',
+    settings: 'Settings',
+    compose: 'Compose',
+    search_mailboxes: 'Search mailboxes...',
+    search_emails: 'Search emails...',
+    no_emails: 'No emails',
+    no_subject: '(no subject)',
+    from: 'From',
+    to: 'To',
+    cc: 'CC',
+    bcc: 'BCC',
+    subject: 'Subject',
+    content: 'Content',
+    send: 'Send',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    create: 'Create',
+    remove: 'Remove',
+    save: 'Save Settings',
+    copy: 'Copy',
+    copied: 'Copied',
+    code_copied: 'Code copied',
+    verification_code: 'Verification Code',
+    click_to_copy: 'Click to copy',
+    identify_btn: 'Identify',
+    identify_codes_label: 'Code',
+    identify_links_label: 'Activation Link',
+    identify_none: 'No verification code or activation link found',
+    attachments: 'Attachments',
+    attachments_label: 'Attachments',
+    drop_files: 'Click or drag files here',
+    random_prefix: 'Random prefix',
+    download_eml: 'Download EML',
+    create_mailbox: 'Create Mailbox',
+    address: 'Address',
+    domain: 'Domain',
+    no_domains: 'No domains configured',
+    select_email: 'Select an email to view',
+    delete_mailbox_confirm: 'Delete this mailbox and all its emails?',
+    delete_email_confirm: 'Delete this email?',
+    remove_domain_confirm: 'Remove this domain?',
+    mailbox_created: 'Mailbox created',
+    mailbox_deleted: 'Mailbox deleted',
+    email_sent: 'Email sent',
+    email_sent_note: 'Email accepted by the sending provider. Delivery failures (bounces/blocks) happen asynchronously and cannot be shown here in real time.',
+    email_deleted: 'Email deleted',
+    domain_removed: 'Domain removed',
+    fill_fields: 'Fill in all fields',
+    from_to_required: 'From and To are required',
+    add_domain: 'Add Domain',
+    select_domain: '-- Select Domain --',
+    all_domains_added: 'All domains already added',
+    no_cf_zones: 'No CF zones found (check API Token)',
+    add: 'Add',
+    configured_domains: 'Configured Domains',
+    no_domains_configured: 'No domains configured. Select a domain from the dropdown to add.',
+    no_mailboxes: 'Create a mailbox first',
+    auto_verifying: 'Auto-verifying...',
+    dns: 'DNS',
+    domain_setup_complete: 'Domain setup complete. Waiting for DNS verification...',
+    select_a_domain: 'Please select a domain',
+    step_resend: 'Adding to Resend...',
+    step_cf_send: 'Adding to CF Email Service...',
+    step_dns: 'Creating DNS records...',
+    step_routing: 'Configuring Email Routing...',
+    step_verify: 'Triggering verification...',
+    done: 'Done',
+    failed: 'Failed',
+    setting_up: 'Setting up...',
+    api_config: 'API Configuration',
+    resend_api_key: 'Resend API Key',
+    cf_api_token: 'Cloudflare API Token',
+    domain_provider_label: 'Domain Provider',
+    domain_provider_resend: 'Resend (third-party)',
+    domain_provider_cf: 'Cloudflare Email Service',
+    domain_provider_desc: 'Controls how domains are onboarded for sending. Resend uses Resend API. CF Email Service uses Cloudflare native email sending (public beta).',
+    telegram_notification: 'Telegram Notification',
+    bot_token: 'Bot Token',
+    chat_id: 'Chat ID',
+    topic_id: 'Topic ID (optional)',
+    email_forwarding: 'Email Forwarding',
+    forward_to: 'Forward To (global)',
+    auto_create_mailbox: 'Auto-Create Mailbox',
+    auto_create_desc: 'When enabled, incoming emails to non-existent addresses under your domains will automatically create a new mailbox. Works with Email Routing catch-all rules for receiving all emails without pre-creating addresses.',
+    send_method_title: 'Send Method',
+    send_method_desc: 'Choose how outbound emails are sent. CF Email Service is recommended (auto-configured). Resend requires a separate API key.',
+    send_method_auto: 'Auto (CF Email Service priority)',
+    send_method_cf_es: 'CF Email Service (recommended)',
+    send_method_resend_only: 'Resend only',
+    send_method_cf_only: 'Cloudflare native (legacy)',
+    att_still_loading: 'Attachments still loading, please wait',
+    att_has_error: 'Some attachments failed to load, please remove them',
+    sending: 'Sending',
+    min_length: 'Min Length',
+    max_length: 'Max Length',
+    webhook: 'Webhook',
+    inbound_webhook_url: 'Inbound Webhook URL',
+    change_password: 'Change Password',
+    current_password: 'Current Password',
+    new_password: 'New Password',
+    new_password_placeholder: 'At least 6 characters',
+    password_changed: 'Password changed',
+    fill_both: 'Fill in both fields',
+    settings_saved: 'Settings saved',
+    configured: 'Configured',
+    not_configured: 'Not configured',
+    mailboxes_stat: 'Mailboxes',
+    received: 'Received',
+    unread: 'Unread',
+    sent_stat: 'Sent',
+    r2_files: 'R2 Files',
+    toggle_theme: 'Toggle theme',
+    toggle_lang: 'Toggle language',
+    logout: 'Logout',
+    pinned: 'Pinned',
+    page_info: 'Page {page} / {total} ({count} total)',
+    search_results: 'Search: {count} results',
+    dns_records_for: 'DNS Records for ',
+    created_records: 'created',
+    existed_records: 'existed',
+    updated: 'updated',
+    no_cf_token: 'CF Token not configured',
+    already_configured: 'already configured',
+    routing_enabled_configuring: 'Routing enabled, configuring...',
+    routing_already_enabled: 'routing enabled',
+    routing_newly_enabled: 'routing activated',
+    domain_setup_partial: 'Domain setup partially complete, check errors',
+    no_records_returned: 'Resend has not returned DNS records yet',
+    catch_all_wrong_type: 'Catch-all is not pointing to a Worker (current type: {type}). Go to CF dashboard -> Email Routing -> Catch-all and change it to "Send to Worker"',
+    catch_all_not_set: 'Catch-all not configured. Go to CF dashboard -> Email Routing -> add Catch-all rule -> select "Send to Worker"',
+    mx_not_set: 'MX records missing. Ensure domain has 3 MX records pointing to *.mx.cloudflare.net',
+    routing_not_enabled: 'Email Routing not enabled. Enable it in the CF dashboard manually',
+    turnstile_error: 'Please complete the verification',
+    username: 'Username',
+    username_placeholder: 'New username (at least 2 characters)',
+    mail: 'Mail',
+    sent_label: 'Sent',
+    no_deleted: 'Trash is empty',
+    no_favorites_mailbox: 'No favorite mailboxes',
+    trash_restore: 'Restore',
+    trash_restore_all: 'Restore All',
+    trash_permanent_delete: 'Delete permanently',
+    trash_clear_all: 'Clear All',
+    trash_clear_confirm: 'Permanently delete all items in trash? This cannot be undone.',
+    trash_permanent_confirm: 'Permanently delete these items? This cannot be undone.',
+    trash_restored: 'Restored',
+    trash_deleted: 'Permanently deleted',
+    trash_cleared: 'Trash emptied',
+    trash_type_inbox: 'Received',
+    trash_type_sent: 'Sent',
+    trash_stat: 'Trash',
+    no_favorites: 'No favorite emails',
+    send_method_resend: 'Send via Resend',
+    send_method_cf: 'Send via Cloudflare',
+    send_method_cf_es: 'Send via CF Email Service',
+    no_send_method: 'No send method configured',
+    setup_guide_title: 'Quick Start Guide',
+    setup_guide_step1: '1. Go to "Settings", choose your domain provider (Resend or CF Email Service)',
+    setup_guide_step2: '2. Enter your Cloudflare API Token (needs: Zone:Read, DNS:Edit, Email Routing Rules:Edit, Email Sending:Edit)',
+    setup_guide_step3: '3. If using Resend provider, also enter your Resend API Key',
+    setup_guide_step4: '4. Come back here, select a domain from the dropdown and add it. DNS and Email Routing will be auto-configured.',
+    subdomain_hint: 'Optional: enter a subdomain prefix (e.g. "mail") to add mail.example.com instead of example.com',
+    cf_api_token_desc: 'Required for domain DNS management and email routing setup. Token needs: Zone:Read, DNS:Edit, Email Routing Rules:Edit, Email Routing Addresses:Edit, Email Sending:Edit (All zones). ⚠️ This is a <b>runtime</b> token used by the worker — it is <b>different</b> from the <code>CF_API_TOKEN</code> GitHub Actions secret used for deployment.',
+    email_quota: 'Email Quota',
+    quota_remaining: 'Remaining',
+    quota_used: 'Used',
+    quota_today: 'Today',
+    quota_month: 'This month',
+    quota_limits_title: 'Sending Quota Limits',
+    quota_limits_desc: 'Used for progress bar display only — does not affect actual sending. Leave blank for unlimited. Set to your account\'s actual limits.',
+    quota_not_configured: 'Not configured (set up this service first)',
+    quota_unlimited: 'Unlimited',
+    quota_leave_blank: 'blank = unlimited',
+    quota_loading: 'Loading…',
+    resend_quota_hint: 'Free plan: 100/day, 3,000/month',
+    cf_quota_hint: 'Approx. 200/day (check your account for actual limits)',
+    resend_day_limit_label: 'Resend Daily Limit',
+    resend_month_limit_label: 'Resend Monthly Limit',
+    cf_day_limit_label: 'CF Email Daily Limit',
+    cf_month_limit_label: 'CF Email Monthly Limit',
+    session_expired: 'Session expired. Please login again.',
+    quota_not_configured_resend: 'Please configure your Resend API Key first',
+    quota_not_configured_cf: 'CF Email sending is a paid feature. Please configure your CF API Token first.',
+    resend_inbound_title: 'Resend Inbound (receive via Resend):',
+    resend_inbound_desc: ' Go to Resend → Domains → Inbound → point the webhook to the URL above. This lets Resend deliver incoming emails to MailHub without Cloudflare Email Routing.',
+    resend_events_url_label: 'Resend Delivery Events Webhook URL',
+    resend_events_url_desc: 'In Resend Dashboard → Webhooks → Add Endpoint, paste this URL and select events: email.delivered / email.bounced / email.delivery_delayed / email.complained. Copy the Signing Secret and paste below.',
+    resend_webhook_secret_label: 'Resend Webhook Signing Secret',
+    resend_webhook_secret_desc: 'Found in Resend → Webhooks → your endpoint → Signing Secret. Used to verify that webhook requests are genuinely from Resend.',
+    resend_webhook_secret_placeholder: 'whsec_...',
+    status_sent: 'Sent',
+    status_delivered: 'Delivered',
+    status_bounced: 'Bounced',
+    status_delayed: 'Delayed',
+    status_complained: 'Spam report',
+    status_clicked: 'Clicked',
+    status_opened: 'Opened',
+    check_status: 'Check Delivery Status',
+    status_updated: 'Status updated',
+    checking: 'Checking',
+    delivery_status: 'Delivery Status',
+    sending_email: 'Sending…',
+    checking_delivery: 'Checking delivery…',
+    delivery_timeout: 'Sent (delivery confirmation pending)',
+    send_failed: 'Send failed',
+    new_mail_arrived: 'New mail received',
+    mark_all_read_success: 'All marked as read',
+    reply: 'Reply',
+  }
+};
+
+let currentLang = localStorage.getItem('mailhub_lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
+
+function T(key, params) {
+  let s = (i18n[currentLang] || i18n.en)[key] || (i18n.en)[key] || key;
+  if (params) Object.keys(params).forEach(k => { s = s.replace('{' + k + '}', params[k]); });
+  return s;
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('mailhub_lang', currentLang);
+  applyI18n();
+  if (currentView === 'settings') { loadSettings(); loadStats(); }
+  else if (currentView === 'domains') { loadDomains(); }
+  else { loadCurrentFolder(); }
+  renderMailboxes();
+}
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      el.placeholder = T(key);
+    } else {
+      el.textContent = T(key);
+    }
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = T(el.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = T(el.dataset.i18nTitle);
+  });
+  const title = document.getElementById('topbarTitle');
+  if (currentView === 'mail') {
+    updateFolderTitle();
+  } else if (currentView === 'domains') { title.textContent = T('domains'); }
+  else if (currentView === 'settings') { title.textContent = T('settings'); }
+  document.getElementById('langBtn').textContent = currentLang === 'zh' ? 'EN' : '\u4E2D';
+}
+
+/* ====== Init ====== */
+(async function init() {
+  const saved = localStorage.getItem('mailhub_theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  applyI18n();
+  try {
+    const config = await fetch('/api/config').then(r => r.json());
+    if (config.turnstile_site_key) {
+      turnstileSiteKey = config.turnstile_site_key;
+      loadTurnstile();
+    }
+  } catch (e) { /* ignore */ }
+  if (token) showApp();
+  document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+})();
+
+function loadTurnstile() {
+  if (!turnstileSiteKey) return;
+  const wrap = document.getElementById('turnstileWrap');
+  wrap.classList.add('active');
+  // Disable login button until turnstile is verified
+  const loginBtn = document.getElementById('loginBtn');
+  if (loginBtn) { loginBtn.disabled = true; loginBtn.style.opacity = '0.5'; loginBtn.style.cursor = 'not-allowed'; }
+  const script = document.createElement('script');
+  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+  script.async = true;
+  document.head.appendChild(script);
+}
+
+function onTurnstileLoad() {
+  const wrap = document.getElementById('turnstileWrap');
+  if (wrap && turnstileSiteKey) {
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) { loginBtn.disabled = true; loginBtn.style.opacity = '0.5'; loginBtn.style.cursor = 'not-allowed'; }
+    turnstileWidgetId = turnstile.render(wrap, {
+      sitekey: turnstileSiteKey,
+      theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+      callback: function(token) {
+        if (loginBtn) { loginBtn.disabled = false; loginBtn.style.opacity = ''; loginBtn.style.cursor = ''; }
+      },
+      'expired-callback': function() {
+        if (loginBtn) { loginBtn.disabled = true; loginBtn.style.opacity = '0.5'; loginBtn.style.cursor = 'not-allowed'; }
+      },
+      'error-callback': function() {
+        if (loginBtn) { loginBtn.disabled = true; loginBtn.style.opacity = '0.5'; loginBtn.style.cursor = 'not-allowed'; }
+      }
+    });
+  }
+}
+
+/* ====== API Helper ====== */
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const controller = new AbortController();
+  const timeout = opts.timeout || 30000;
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const resp = await fetch(path, { ...opts, headers: { ...headers, ...(opts.headers || {}) }, signal: controller.signal });
+    let data = {};
+    try { data = await resp.json(); } catch(e) { /* ignore non-JSON body */ }
+    if (resp.status === 401) {
+      // Only logout on real authentication failures, not transient errors
+      doLogout();
+      throw new Error(T ? T('session_expired') : '会话已过期，请重新登录');
+    }
+    if (!resp.ok) throw new Error(data.error || 'Request failed (' + resp.status + ')');
+    return data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Request timeout');
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ====== Auth ====== */
+async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  const loginBtn = document.getElementById('loginBtn');
+  
+  // First check if it's first-run setup
+  if (document.getElementById('setupForm')?.style.display === 'block') {
+    return handleFirstRunSetup();
+  }
+
+  if (!username || !pw) return toast(T('fill_fields'), 'error');
+  let turnstile_token = '';
+  if (turnstileSiteKey && turnstileWidgetId !== null) {
+    turnstile_token = turnstile.getResponse(turnstileWidgetId);
+    if (!turnstile_token) return toast(T('turnstile_error'), 'error');
+  }
+  
+  if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = '...'; }
+  try {
+    const data = await api('/api/login', { method: 'POST', body: JSON.stringify({ username, password: pw, turnstile_token }) });
+    if (data.setup_required) {
+      showSetupForm();
+      return;
+    }
+    token = data.token;
+    localStorage.setItem('mailhub_token', token);
+    showApp();
+  } catch (e) {
+    toast(e.message, 'error');
+    if (turnstileSiteKey && turnstileWidgetId !== null) {
+      try { turnstile.reset(turnstileWidgetId); } catch (te) {}
+    }
+  } finally {
+    if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = T('login_btn'); }
+  }
+}
+
+function showSetupForm() {
+  const card = document.querySelector('.login-card');
+  card.innerHTML = `
+    <h1 data-i18n="login_title">MailHub</h1>
+    <p style="margin-bottom:16px;color:var(--primary);font-weight:600">Initial Setup</p>
+    <div id="setupForm" style="display:block;text-align:left">
+      <div class="form-group"><label>Admin Username</label><input type="text" id="setupUser" placeholder="admin"></div>
+      <div class="form-group"><label>Admin Password</label><input type="password" id="setupPw" placeholder="at least 6 chars"></div>
+      <div class="form-group">
+        <label>Email Provider</label>
+        <select id="setupProvider" style="width:100%" onchange="(function(v){document.getElementById('setupResendGroup').style.display=v==='resend'?'block':'none';document.getElementById('setupCfGroup').style.display=v==='cf'?'block':'none';})(this.value)">
+          <option value="cf">Cloudflare Email Service</option>
+          <option value="resend">Resend (Third-party)</option>
+        </select>
+        <p style="font-size:11px;color:var(--text3);margin:4px 0 0">Choose how domains and outbound email are handled. You can change this later in Settings.</p>
+      </div>
+      <div class="form-group" id="setupCfGroup">
+        <label>Cloudflare API Token <span style="font-size:11px;font-weight:400;color:var(--text3)">(for email routing — not the deployment token)</span></label>
+        <input type="password" id="setupCfToken" placeholder="Needs: Zone:Read, DNS:Edit, Email Routing Rules:Edit, Email Sending:Edit">
+        <p style="font-size:11px;color:var(--text3);margin:4px 0 0">⚠️ This token is used <b>at runtime</b> for DNS and email routing setup. It is <b>different</b> from the <code>CF_API_TOKEN</code> you added to GitHub Actions for deployment.</p>
+      </div>
+      <div class="form-group" id="setupResendGroup" style="display:none">
+        <label>Resend API Key</label>
+        <input type="password" id="setupResendKey" placeholder="re_...">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="handleFirstRunSetup()" id="setupBtn">Complete Setup</button>
+    </div>
+  `;
+  applyI18n();
+}
+
+async function handleFirstRunSetup() {
+  const user = document.getElementById('setupUser').value.trim();
+  const pw = document.getElementById('setupPw').value;
+  const cfToken = document.getElementById('setupCfToken').value.trim();
+  const provider = document.getElementById('setupProvider').value;
+  const resendKey = document.getElementById('setupResendKey').value.trim();
+  const btn = document.getElementById('setupBtn');
+
+  if (!user || !pw || pw.length < 6) return toast('Username and 6+ char password required', 'error');
+  
+  btn.disabled = true; btn.textContent = 'Configuring...';
+  try {
+    const config = { new_username: user, new_password: pw, cf_token: cfToken, domain_provider: provider };
+    if (provider === 'resend') config.resend_key = resendKey;
+    
+    const data = await api('/api/login', { method: 'POST', body: JSON.stringify({ setup_config: config }) });
+    token = data.token;
+    localStorage.setItem('mailhub_token', token);
+    showApp();
+    toast('Setup completed!', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Complete Setup'; }
+}
+
+function doLogout() {
+  token = null;
+  localStorage.removeItem('mailhub_token');
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  // Reset state
+  currentMailboxId = null;
+  currentMessages = [];
+  currentMessageId = null;
+  currentView = 'mail';
+  currentFolder = 'inbox';
+  // Show login page
+  document.getElementById('appView').style.display = 'none';
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginUsername').value = '';
+  // Reset turnstile if active
+  if (turnstileSiteKey && turnstileWidgetId !== null) {
+    try { turnstile.reset(turnstileWidgetId); } catch (e) {}
+  }
+}
+
+async function showApp() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').style.display = 'flex';
+  await loadMailboxes();
+  navigate('mail');
+  startAutoRefresh();
+}
+
+/* ====== Navigation ====== */
+function navigate(view) {
+  currentView = view;
+  document.getElementById('inboxView').style.display = 'none';
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('folderCol').style.display = 'none';
+  document.getElementById('domainsPage').style.display = 'none';
+  document.getElementById('settingsPage').style.display = 'none';
+  const title = document.getElementById('topbarTitle');
+  if (view === 'mail') {
+    document.getElementById('folderCol').style.display = '';
+    document.getElementById('inboxView').style.display = '';
+    document.getElementById('detailView').style.display = '';
+    loadCurrentFolder();
+    updateFolderTitle();
+  } else if (view === 'domains') {
+    document.getElementById('domainsPage').style.display = 'block';
+    title.textContent = T('domains');
+    loadDomains();
+  } else if (view === 'settings') {
+    document.getElementById('settingsPage').style.display = 'block';
+    title.textContent = T('settings');
+    // Show skeleton immediately so there's no blank flash
+    var skeletonCard = '<div style="height:20px;background:var(--border);border-radius:4px;margin-bottom:8px;animation:pulse 1.2s infinite alternate"></div>';
+    document.getElementById('statsGrid').innerHTML =
+      [1,2,3,4,5,6].map(() =>
+        '<div class="stat-card" style="opacity:.4">' + skeletonCard + '</div>'
+      ).join('');
+    document.getElementById('quotaInfo').innerHTML =
+      '<div class="card" style="opacity:.4;padding:16px">' + skeletonCard + skeletonCard + '</div>';
+    loadSettings();
+    loadStats();
+  }
+}
+
+function updateFolderTitle() {
+  const title = document.getElementById('topbarTitle');
+  const mbxName = currentMailboxId ? (mailboxes.find(m => m.id === currentMailboxId)?.address || '') : '';
+  if (currentFolder === 'inbox') {
+    title.textContent = mbxName || T('all_inbox');
+  } else if (currentFolder === 'sent') {
+    title.textContent = mbxName ? (T('sent') + ' - ' + mbxName) : T('sent');
+  } else if (currentFolder === 'favorites') {
+    title.textContent = T('favorite');
+  } else if (currentFolder === 'deleted') {
+    title.textContent = T('deleted');
+  }
+}
+
+function switchFolder(folder) {
+  currentFolder = folder;
+  currentPage = 1;
+  currentMessageId = null;
+  isSearchMode = false;
+  document.getElementById('msgSearch').value = '';
+  closeDetail();
+  document.querySelectorAll('.folder-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.folder === folder);
+  });
+  updateFolderTitle();
+  loadCurrentFolder();
+}
+
+function loadCurrentFolder() {
+  if (currentFolder === 'inbox') { loadMessages(); }
+  else if (currentFolder === 'sent') { loadSentInList(); }
+  else if (currentFolder === 'favorites') { loadFavoriteMessages(); }
+  else if (currentFolder === 'deleted') { renderDeletedPlaceholder(); }
+}
+
+function updatePaginationUI() {}
+
+/* ====== Mailboxes ====== */
+async function loadMailboxes() {
+  try {
+    const data = await api('/api/mailboxes');
+    mailboxes = data.mailboxes || [];
+    renderMailboxes();
+    updateFolderCounts();
+  } catch (e) { console.error(e); }
+}
+
+function updateGlobalUnreadCount() {
+  // Kept for compatibility – actual folder-column counts are driven by updateFolderCounts()
+}
+
+async function updateFolderCounts() {
+  try {
+    let url = '/api/folder-counts';
+    if (currentMailboxId) url += '?mailbox_id=' + currentMailboxId;
+    const d = await api(url);
+
+    function setCount(id, n, highlight) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (n > 0) {
+        el.textContent = highlight ? '+' + n : n;
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
+    // Inbox: show "+N unread" when there are unread, else show total
+    const inboxEl = document.getElementById('folderInboxCount');
+    if (inboxEl) {
+      if (d.inbox_unread > 0) {
+        inboxEl.textContent = '+' + d.inbox_unread;
+        inboxEl.style.display = '';
+        inboxEl.style.background = '';
+      } else if (d.inbox_total > 0) {
+        inboxEl.textContent = d.inbox_total;
+        inboxEl.style.display = '';
+      } else {
+        inboxEl.style.display = 'none';
+      }
+    }
+
+    setCount('folderSentCount', d.sent_total);
+    setCount('folderFavCount', d.fav_total);
+    setCount('folderDeletedCount', d.trash_total);
+    updateSentFailBadge(d.sent_failed || 0);
+  } catch (e) { /* silent */ }
+}
+
+function renderMailboxes() {
+  const container = document.getElementById('mbxList');
+  const search = document.getElementById('mbxSearch').value.toLowerCase();
+  const filtered = search ? mailboxes.filter(m => m.address.toLowerCase().includes(search)) : mailboxes;
+  const colors = ['#4361ee','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9'];
+  container.innerHTML = filtered.map(m => {
+    const color = colors[m.id % colors.length];
+    const initial = m.local_part[0]?.toUpperCase() || '?';
+    const isActive = m.id === currentMailboxId;
+    return '<div class="mbx-item' + (isActive ? ' active' : '') + '" onclick="selectMailbox(' + m.id + ')">' +
+      '<div class="mbx-avatar" style="background:' + color + '">' + initial + '</div>' +
+      '<div class="mbx-info">' +
+        '<div class="mbx-addr">' + esc(m.address) + '</div>' +
+        '<div class="mbx-meta">' +
+          (m.is_pinned ? '<span class="mbx-pin" title="Pinned">&#9733;</span>' : '') +
+          (m.is_favorite ? '<span class="mbx-fav" title="Favorite">&#9829;</span>' : '') +
+          (m.is_auto_created ? '<span class="mbx-auto">Auto</span>' : '') +
+          (m.forward_to ? '<span title="Forwarding">&#8594;</span>' : '') +
+        '</div>' +
+      '</div>' +
+      (m.unread_count > 0 ? '<span class="mbx-badge">' + m.unread_count + '</span>' : '') +
+      '<div class="mbx-actions">' +
+        '<button class="btn-icon btn-sm" onclick="event.stopPropagation();togglePin(' + m.id + ')" title="Pin">&#9733;</button>' +
+        '<button class="btn-icon btn-sm" onclick="event.stopPropagation();toggleFavorite(' + m.id + ')" title="Favorite">&#9829;</button>' +
+        '<button class="btn-icon btn-sm" onclick="event.stopPropagation();copyAddr(\'' + esc(m.address) + '\')" title="Copy">&#x2398;</button>' +
+        '<button class="btn-icon btn-sm" onclick="event.stopPropagation();deleteMailbox(' + m.id + ')" title="Delete" style="color:var(--danger)">&times;</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function filterMailboxes() { renderMailboxes(); }
+
+function selectMailbox(id) {
+  if (id === null) {
+    currentMailboxId = null;
+  } else {
+    currentMailboxId = id === currentMailboxId ? null : id;
+  }
+  currentPage = 1;
+  currentMessageId = null;
+  closeDetail();
+  renderMailboxes();
+  updateAllInboxHighlight();
+  updateFolderCounts();
+  if (currentView !== 'mail') {
+    // Switch to mail view first
+    navigate('mail');
+  } else {
+    // Stay on current folder (inbox/sent/favorites), just reload with new mailbox filter
+    document.querySelectorAll('.folder-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.folder === currentFolder);
+    });
+    updateFolderTitle();
+    if (isSearchMode) { searchMessages(); } else { loadCurrentFolder(); }
+  }
+  closeSidebar();
+}
+
+function updateAllInboxHighlight() {
+  const allEl = document.getElementById('mbxAllInbox');
+  if (allEl) {
+    if (currentMailboxId === null) {
+      allEl.style.background = 'var(--primary-light)';
+    } else {
+      allEl.style.background = '';
+    }
+  }
+}
+
+async function togglePin(id) {
+  try { await api('/api/mailboxes/pin', { method: 'POST', body: JSON.stringify({ id }) }); await loadMailboxes(); } catch (e) { toast(e.message, 'error'); }
+}
+
+async function toggleFavorite(id) {
+  try { await api('/api/mailboxes/' + id + '/favorite', { method: 'POST' }); await loadMailboxes(); } catch (e) { toast(e.message, 'error'); }
+}
+
+function copyAddr(addr) {
+  navigator.clipboard.writeText(addr);
+  toast(T('copied') + ': ' + addr, 'success');
+}
+
+async function deleteMailbox(id) {
+  if (!confirm(T('delete_mailbox_confirm'))) return;
+  try { await api('/api/mailboxes/' + id, { method: 'DELETE' }); if (currentMailboxId === id) currentMailboxId = null; await loadMailboxes(); loadMessages(); toast(T('mailbox_deleted'), 'success'); } catch (e) { toast(e.message, 'error'); }
+}
+
+function showCreateMailbox() {
+  document.getElementById('createMbxModal').classList.add('show');
+  const sel = document.getElementById('newMbxDomain');
+  sel.innerHTML = '<option value="">Loading...</option>';
+  api('/api/config').then(d => {
+    sel.innerHTML = (d.domains || []).map(dom => '<option value="' + dom + '">' + dom + '</option>').join('');
+    if (!sel.innerHTML) sel.innerHTML = '<option value="">' + T('no_domains') + '</option>';
+  });
+}
+function hideCreateMailbox() { document.getElementById('createMbxModal').classList.remove('show'); }
+
+async function createMailbox() {
+  const local = document.getElementById('newMbxLocal').value.trim();
+  const domain = document.getElementById('newMbxDomain').value;
+  if (!local || !domain) return toast(T('fill_fields'), 'error');
+  try {
+    await api('/api/mailboxes', { method: 'POST', body: JSON.stringify({ local_part: local, domain }) });
+    hideCreateMailbox();
+    await loadMailboxes();
+    toast(T('mailbox_created'), 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ====== Random Prefix ====== */
+function generateRandomPrefix(len) {
+  len = len || 8;
+  var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from({ length: len }, function() { return chars[Math.floor(Math.random() * chars.length)]; }).join('');
+}
+
+function randomizeMailboxPrefix() {
+  document.getElementById('newMbxLocal').value = generateRandomPrefix();
+}
+
+function randomizeFromAddr() {
+  var sel = document.getElementById('compFrom');
+  if (sel.options.length === 0) return;
+  var currentAddr = sel.value;
+  var domain = currentAddr ? currentAddr.split('@')[1] : '';
+  if (!domain) {
+    // fallback: use domain from first non-random option
+    for (var i = 0; i < sel.options.length; i++) {
+      if (!sel.options[i].dataset.random) {
+        domain = sel.options[i].value.split('@')[1];
+        break;
+      }
+    }
+  }
+  if (!domain) return;
+  // Remove any previously added random options
+  for (var i = sel.options.length - 1; i >= 0; i--) {
+    if (sel.options[i].dataset.random) sel.remove(i);
+  }
+  var newAddr = generateRandomPrefix() + '@' + domain;
+  var opt = document.createElement('option');
+  opt.value = newAddr;
+  opt.textContent = newAddr + ' (random)';
+  opt.dataset.random = '1';
+  sel.appendChild(opt);
+  sel.value = newAddr;
+}
+
+/* ====== Messages ====== */
+let msgLoading = false;
+let msgHasMore = true;
+
+async function loadMessages(append) {
+  if (msgLoading) return;
+  try {
+    if (!append) { currentPage = 1; msgHasMore = true; }
+    msgLoading = true;
+    const params = new URLSearchParams({ page: currentPage, limit: 50 });
+    if (currentMailboxId) params.set('mailbox_id', currentMailboxId);
+    const data = await api('/api/messages?' + params);
+    const newMsgs = data.messages || [];
+    if (append) {
+      currentMessages = currentMessages.concat(newMsgs);
+    } else {
+      currentMessages = newMsgs;
+    }
+    if (newMsgs.length < 50) msgHasMore = false;
+    renderMessages();
+    updateFolderCounts();
+  } catch (e) { console.error(e); }
+  finally { msgLoading = false; }
+}
+
+// Infinite scroll for message list
+document.addEventListener('DOMContentLoaded', function() {
+  const msgListEl = document.getElementById('msgList');
+  if (msgListEl) {
+    msgListEl.addEventListener('scroll', function() {
+      if (!msgHasMore || msgLoading) return;
+      if (msgListEl.scrollTop + msgListEl.clientHeight >= msgListEl.scrollHeight - 100) {
+        currentPage++;
+        if (currentFolder === 'inbox') {
+          if (isSearchMode) { searchMessages(true); } else { loadMessages(true); }
+        } else if (currentFolder === 'sent') {
+          loadSentInList(true);
+        } else if (currentFolder === 'favorites') {
+          loadFavoriteMessages(true);
+        } else if (currentFolder === 'deleted') {
+          loadTrash(true);
+        }
+      }
+    });
+  }
+});
+
+function renderMessages() {
+  const container = document.getElementById('msgList');
+  if (!currentMessages.length) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + T('no_emails') + '</div>';
+    return;
+  }
+  const colors = ['#4361ee','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9'];
+  container.innerHTML = currentMessages.map(m => {
+    const senderName = (m.sender || '').split('<')[0].trim() || (m.sender || '').split('@')[0] || '?';
+    const initial = senderName[0]?.toUpperCase() || '?';
+    const color = colors[Math.abs(hashStr(m.sender || '')) % colors.length];
+    const isActive = m.id === currentMessageId;
+    const time = formatTime(m.received_at);
+    const toDisplay = m.to_addr || (m.mailbox_id ? (mailboxes.find(x => x.id === m.mailbox_id) || {}).address : '') || '';
+    return '<div class="msg-item' + (isActive ? ' active' : '') + (!m.is_read ? ' unread' : '') + '" onclick="openMessage(' + m.id + ')">' +
+      '<div class="msg-avatar" style="background:' + color + '">' + initial + '</div>' +
+      '<div class="msg-body">' +
+        '<div class="msg-sender">' + esc(m.subject || T('no_subject')) + '</div>' +
+        (m.preview ? '<div class="msg-preview">' + esc(m.preview) + '</div>' : '') +
+        '<div class="msg-from-to">' +
+          '<div class="msg-ft-row"><span class="msg-ft-label">From</span><span class="msg-ft-val">' + esc(senderName) + '</span></div>' +
+          (toDisplay ? '<div class="msg-ft-row"><span class="msg-ft-label">To</span><span class="msg-ft-val">' + esc(toDisplay) + '</span></div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="msg-right">' +
+        '<span class="msg-time">' + time + '</span>' +
+        (m.verification_code ? '<span class="msg-code" onclick="event.stopPropagation();copyCode(\'' + m.verification_code + '\')" title="Click to copy">' + m.verification_code + '</span>' : '') +
+        '<button class="btn-icon btn-sm" onclick="event.stopPropagation();quickToggleFav(' + m.id + ',this)" title="收藏" style="font-size:16px;color:' + (m.is_favorite ? '#e74c3c' : 'var(--text3)') + '">' + (m.is_favorite ? '&#9829;' : '&#9825;') + '</button>' +
+        (!m.is_read ? '<span class="msg-unread-dot"></span>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function openMessage(id) {
+  currentMessageId = id;
+  currentDetailType = 'inbox';
+  renderMessages();
+  try {
+    const data = await api('/api/messages/' + id);
+    const msg = data.message;
+    currentMessageData = msg;
+    document.getElementById('detailEmpty').style.display = 'none';
+    document.getElementById('detailContent').style.display = '';
+    document.getElementById('detailSubject').textContent = msg.subject || '(no subject)';
+    document.getElementById('detailFrom').textContent = msg.sender;
+    document.getElementById('detailTo').textContent = msg.to_addr;
+    document.getElementById('detailTime').textContent = parseUtcDate(msg.received_at).toLocaleString();
+    document.getElementById('detailSentBadge').style.display = 'none';
+    var checkBtn = document.getElementById('sentCheckStatusBtn');
+    if (checkBtn) checkBtn.style.display = 'none';
+    var errEl = document.getElementById('sentDeliveryError');
+    if (errEl) errEl.style.display = 'none';
+
+    const replyBtn = document.getElementById('detailReplyBtn');
+    if (replyBtn) replyBtn.style.display = '';
+
+    const favBtn = document.getElementById('detailFavBtn');
+    if (favBtn) {
+      favBtn.style.display = '';
+      favBtn.onclick = toggleMsgFavorite;
+      const favIcon = document.getElementById('detailFavIcon');
+      if (favIcon) favIcon.innerHTML = msg.is_favorite ? '&#9829;' : '&#9825;';
+      favBtn.style.color = msg.is_favorite ? '#e74c3c' : '';
+    }
+
+    renderDetailCode(msg.verification_code, msg.html_content);
+
+    const attEl = document.getElementById('detailAttachments');
+    if (data.attachments && data.attachments.length) {
+      attEl.style.display = '';
+      attEl.innerHTML = '<div class="card-title">' + T('attachments') + '</div>' + data.attachments.map(a =>
+        '<span class="att-item" onclick="downloadAttachment(' + a.id + ', \'' + esc(a.filename) + '\')"><span class="att-icon">\uD83D\uDCCE</span>' + esc(a.filename) + ' (' + formatSize(a.size) + ')</span>'
+      ).join('') + (data.message.has_eml ? '<div><button class="eml-download" onclick="downloadEml(' + msg.id + ')">\u2B07 Download EML</button></div>' : '');
+    } else {
+      attEl.style.display = 'none';
+      if (data.message.has_eml) {
+        attEl.style.display = '';
+        attEl.innerHTML = '<button class="eml-download" onclick="downloadEml(' + msg.id + ')">\u2B07 Download EML</button>';
+      }
+    }
+
+    const bodyEl = document.getElementById('detailBody');
+    if (msg.html_content) {
+      bodyEl.innerHTML = '<iframe id="emailFrame" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="' + esc(msg.html_content).replace(/"/g, '&quot;') + '"></iframe>';
+      setTimeout(() => {
+        const f = document.getElementById('emailFrame');
+        if (f && f.contentDocument) {
+          // Make all links open in new tab
+          const links = f.contentDocument.querySelectorAll('a[href]');
+          links.forEach(function(link) {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+          });
+          f.style.height = (f.contentDocument.body?.scrollHeight || 400) + 'px';
+        }
+      }, 200);
+    } else {
+      bodyEl.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word">' + esc(msg.text_content || '') + '</pre>';
+    }
+
+    const idx = currentMessages.findIndex(m => m.id === id);
+    if (idx !== -1) currentMessages[idx].is_read = 1;
+    renderMessages();
+    loadMailboxes();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function closeDetail() {
+  currentMessageId = null;
+  document.getElementById('detailEmpty').style.display = '';
+  document.getElementById('detailContent').style.display = 'none';
+}
+
+async function deleteCurrentMsg() {
+  if (!currentMessageId) return;
+  if (!confirm(T('delete_email_confirm'))) return;
+  try {
+    if (currentDetailType === 'sent' && typeof currentMessageId === 'string' && currentMessageId.startsWith('sent_')) {
+      const sentId = parseInt(currentMessageId.replace('sent_', ''));
+      await api('/api/sent/' + sentId, { method: 'DELETE' });
+      closeDetail();
+      loadCurrentFolder();
+    } else {
+      await api('/api/messages/' + currentMessageId, { method: 'DELETE' });
+      closeDetail();
+      await loadMessages();
+      await loadMailboxes();
+    }
+    toast(T('email_deleted'), 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function searchMessages(append) {
+  const q = document.getElementById('msgSearch').value.trim();
+  if (!q) { isSearchMode = false; loadMessages(); return; }
+  if (msgLoading) return;
+  try {
+    if (!append) { currentPage = 1; msgHasMore = true; }
+    isSearchMode = true;
+    msgLoading = true;
+    const params = new URLSearchParams({ q, page: currentPage, limit: 50 });
+    if (currentMailboxId) params.set('mailbox_id', currentMailboxId);
+    const data = await api('/api/messages?' + params);
+    const newMsgs = data.messages || [];
+    if (newMsgs.length < 50) msgHasMore = false;
+    if (append) {
+      currentMessages = currentMessages.concat(newMsgs);
+    } else {
+      currentMessages = newMsgs;
+    }
+    renderMessages();
+  } catch (e) { toast(e.message, 'error'); }
+  finally { msgLoading = false; }
+}
+
+function prevPage() {}
+function nextPage() {}
+
+async function markAllRead() {
+  try {
+    const body = {};
+    if (currentMailboxId) body.mailbox_id = currentMailboxId;
+    await api('/api/messages/mark-all-read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    currentMessages.forEach(m => m.is_read = 1);
+    renderMessages();
+    updateFolderCounts();
+    loadMailboxes();
+    toast(T('mark_all_read_success'), 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function copyCode(code) {
+  navigator.clipboard.writeText(code);
+  toast(T('code_copied') + ': ' + code, 'success');
+}
+
+/* ====== Activation link extraction ====== */
+
+function extractActivationLinks(html) {
+  if (!html) return [];
+  var linkKeywords = [
+    'confirm','activate','activation','verify','verification','validate',
+    'register','signup','sign-up','magic-link','magic_link',
+    '激活','确认','验证','注册'
+  ];
+  // Known email click-tracking / delivery wrapper domains.
+  // When a link's hostname matches, we try to unwrap the real destination URL
+  // from the tracking URL's path or query params instead of showing the wrapper.
+  var trackingDomains = [
+    'resend-links.com',                               // Resend click tracking (*.resend-links.com)
+    'click.resend.com','track.resend.com',
+    'click.sendgrid.net','u.sendgrid.net','sendgrid.net',
+    'link.mailgun.org','email.mailgun.org',
+    'click.mailchimp.com','list-manage.com',
+    'amazonses.com',                                  // covers *.us-east-1.amazonses.com etc.
+    'track.amazonses.com','email.amazonses.com',
+    'mandrillapp.com','sparkpostmail.com','postmarkapp.com',
+    'cmail1.com','cmail2.com','cmail3.com'
+  ];
+
+  // Try to extract the real destination URL from a click-tracking wrapper URL.
+  // Returns the decoded destination string, or null if unable to determine.
+  function unwrapTrackerUrl(rawHref) {
+    try {
+      var u = new URL(rawHref);
+      // Query-param strategies (most ESPs): ?redirect=, ?url=, ?to=, ?link=, ?target=
+      var qpNames = ['redirect','url','to','link','target','u'];
+      for (var i = 0; i < qpNames.length; i++) {
+        var val = u.searchParams.get(qpNames[i]);
+        if (val && val.startsWith('http')) return decodeURIComponent(val);
+      }
+      // Path-based strategy (Resend, some others):
+      // e.g. /CL0/https:%2F%2Fwasmer.io%2Fverify-email.../2/<id>/<sig>
+      var parts = u.pathname.split('/').filter(Boolean);
+      for (var j = 0; j < parts.length; j++) {
+        var decoded = '';
+        try { decoded = decodeURIComponent(parts[j]); } catch(e) { decoded = parts[j]; }
+        if (decoded.startsWith('http://') || decoded.startsWith('https://')) return decoded;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function isTracker(hostname) {
+    return trackingDomains.some(function(d) { return hostname === d || hostname.endsWith('.' + d); });
+  }
+
+  function decodeEntities(s) {
+    return s.replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#(\d+);/g, function(_,n){ return String.fromCharCode(+n); });
+  }
+
+  var links = [];
+  var seen = new Set();
+  var hrefRe = /<a[^>]+href=["']([^"'>\s]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  var m;
+  while ((m = hrefRe.exec(html)) !== null) {
+    var href = m[1];
+    var text = (m[2] || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (!href || href.startsWith('mailto:') || href.startsWith('#') || !href.startsWith('http')) continue;
+    var normalHref = decodeEntities(href);
+    var hostname = '';
+    var finalHref = normalHref;
+    try {
+      var u = new URL(normalHref);
+      hostname = u.hostname.toLowerCase();
+    } catch(e) { continue; }
+
+    // If this is a tracking wrapper, try to resolve the real destination
+    if (isTracker(hostname)) {
+      var unwrapped = unwrapTrackerUrl(normalHref);
+      if (!unwrapped) continue;  // can't unwrap — skip entirely
+      finalHref = unwrapped;
+      try {
+        var u2 = new URL(finalHref);
+        hostname = u2.hostname.toLowerCase();
+      } catch(e) { continue; }
+    }
+
+    // Dedup by host+path (ignore query params — they may carry per-user tokens)
+    var dedupeKey = hostname;
+    try { dedupeKey = hostname + new URL(finalHref).pathname.toLowerCase(); } catch(e) {}
+    if (seen.has(dedupeKey)) continue;
+
+    var textLow = text.toLowerCase();
+    var hrefLow = finalHref.toLowerCase();
+    if (!linkKeywords.some(function(kw) { return textLow.indexOf(kw) !== -1 || hrefLow.indexOf(kw) !== -1; })) continue;
+
+    seen.add(dedupeKey);
+    links.push({ href: finalHref });
+  }
+  return links;
+}
+
+function renderDetailCode(verificationCode, htmlContent) {
+  var codeEl = document.getElementById('detailCode');
+  if (!codeEl) return;
+  var links = extractActivationLinks(htmlContent || '');
+  if (!verificationCode && !links.length) { codeEl.style.display = 'none'; return; }
+  var html = '<div class="detail-code-area">';
+  if (verificationCode) {
+    html += '<div class="msg-detail-code" onclick="copyCode(\'' + esc(verificationCode) + '\')">' +
+      verificationCode +
+      '<span style="font-size:12px;font-weight:400;opacity:.6;margin-left:4px">' + T('click_to_copy') + '</span>' +
+    '</div>';
+  }
+  if (links.length) {
+    html += '<div style="margin-top:' + (verificationCode ? '8px' : '0') + '">';
+    links.forEach(function(l) {
+      var domain = l.href;
+      try { domain = new URL(l.href).hostname; } catch(e) {}
+      html += '<a class="detail-link-btn" href="' + esc(l.href) + '" target="_blank" rel="noopener noreferrer">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' +
+        T('identify_links_label') +
+        '<span class="detail-link-tooltip">' + esc(domain) + '</span>' +
+      '</a>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  codeEl.innerHTML = html;
+  codeEl.style.display = '';
+}
+
+/* ====== Auto Refresh ====== */
+let lastKnownUnread = -1;
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  // Poll every 10 seconds for new mail
+  autoRefreshTimer = setInterval(async () => {
+    try {
+      const data = await api('/api/unread-count');
+      const newUnread = data.unread || 0;
+      // If unread count increased, refresh the mailbox list and current folder
+      if (lastKnownUnread >= 0 && newUnread > lastKnownUnread) {
+        await loadMailboxes();
+        if (currentView === 'mail' && (currentFolder === 'inbox' || currentFolder === 'favorites')) {
+          if (isSearchMode) { searchMessages(); } else { loadCurrentFolder(); }
+        }
+        // Show a toast notification for new mail
+        toast(T('new_mail_arrived'), 'info');
+      } else if (currentView === 'mail' && currentFolder === 'inbox') {
+        // Still refresh inbox periodically even without count change (covers read state sync)
+        await loadMailboxes();
+        if (isSearchMode) { searchMessages(); } else { loadMessages(); }
+      }
+      lastKnownUnread = newUnread;
+    } catch (e) { /* ignore polling errors */ }
+  }, 10000);
+}
+
+/* ====== Compose ====== */
+async function replyToMessage() {
+  if (!currentMessageData) return;
+  const msg = currentMessageData;
+  const toAddr = msg.to_addr || '';
+  await showCompose(toAddr);
+  // Fill in reply fields
+  const senderEmail = (msg.sender || '').match(/<([^>]+)>/)?.[1] || msg.sender || '';
+  document.getElementById('compTo').value = senderEmail;
+  const subject = msg.subject || '';
+  document.getElementById('compSubject').value = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
+  // Build quoted content
+  const date = parseUtcDate(msg.received_at).toLocaleString();
+  const quoteHeader = '\n\n---------- ' + T('reply') + ' ----------\nFrom: ' + (msg.sender || '') + '\nDate: ' + date + '\nSubject: ' + (msg.subject || '') + '\n\n';
+  const originalText = msg.text_content || '';
+  if (window.quillEditor) {
+    window.quillEditor.setText(quoteHeader + originalText);
+    window.quillEditor.setSelection(0, 0);
+  }
+}
+
+async function showCompose(replyFrom) {
+  document.getElementById('composeModal').classList.add('show');
+  const sel = document.getElementById('compFrom');
+  let options = mailboxes.map(m => '<option value="' + esc(m.address) + '">' + esc(m.address) + '</option>');
+  // If no mailboxes exist, generate options from configured domains
+  if (!options.length) {
+    try {
+      const config = await api('/api/config');
+      const domains = config.domains || [];
+      options = domains.map(d => '<option value="user@' + d + '">user@' + d + '</option>');
+    } catch (e) { /* ignore */ }
+  }
+  if (!options.length) {
+    options.push('<option value="">' + T('no_mailboxes') + '</option>');
+  }
+  sel.innerHTML = options.join('');
+  if (replyFrom) sel.value = replyFrom;
+  // Initialize Quill editor
+  if (!window.quillEditor) {
+    window.quillEditor = new Quill('#compBody', {
+      theme: 'snow',
+      modules: {
+        toolbar: [['bold','italic','underline','strike'],['blockquote','code-block'],[{'header':1},{'header':2}],[{'list':'ordered'},{'list':'bullet'}],[{'color':[]},{'background':[]}],['link','image'],['clean']]
+      }
+    });
+  } else {
+    window.quillEditor.setContents([]);
+  }
+}
+
+function hideCompose() {
+  document.getElementById('composeModal').classList.remove('show');
+  if (window.quillEditor) window.quillEditor.setContents([]);
+  composeAttachments = [];
+  document.getElementById('compFileList').innerHTML = '';
+}
+
+async function sendEmail() {
+  const from = document.getElementById('compFrom').value;
+  const to = document.getElementById('compTo').value.trim();
+  const cc = document.getElementById('compCc').value.trim();
+  const bcc = document.getElementById('compBcc').value.trim();
+  const subject = document.getElementById('compSubject').value;
+  let bodyHtml = window.quillEditor ? window.quillEditor.root.innerHTML : '';
+  if (!from || !to) return toast(T('from_to_required'), 'error');
+
+  // Check if all attachments are ready
+  const hasLoading = composeAttachments.some(a => a.status === 'loading');
+  if (hasLoading) return toast(T('att_still_loading'), 'error');
+  const hasError = composeAttachments.some(a => a.status === 'error');
+  if (hasError) return toast(T('att_has_error'), 'error');
+
+  // Extract base64 images from HTML and convert to CID inline attachments
+  const inlineAtts = [];
+  let cidCounter = 0;
+  bodyHtml = bodyHtml.replace(/<img\s+[^>]*src="data:([^;]+);base64,([^"]+)"[^>]*>/gi, function(match, mimeType, b64Data) {
+    cidCounter++;
+    const cid = 'inline-img-' + cidCounter + '-' + Date.now();
+    const ext = mimeType.split('/')[1] || 'png';
+    inlineAtts.push({
+      filename: 'image-' + cidCounter + '.' + ext,
+      content_type: mimeType,
+      content: b64Data,
+      cid: cid
+    });
+    return '<img src="cid:' + cid + '">';
+  });
+
+  // Disable send button and show delivery card in "sending" state
+  const sendBtn = document.querySelector('#composeModal .modal-footer .btn-primary');
+  const origText = sendBtn ? sendBtn.textContent : '';
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = T('sending') + '...'; }
+
+  // Show delivery card immediately — sending phase (0 → 40%)
+  closeDeliveryCard();
+  _setDeliveryCard('📤', T('sending_email'), 0, null, null);
+  setTimeout(function() {
+    var bar = document.getElementById('dcBar');
+    if (bar) bar.style.width = '40%';
+  }, 80);
+
+  try {
+    const payload = { from, to, subject, html: bodyHtml };
+    if (cc) payload.cc = cc;
+    if (bcc) payload.bcc = bcc;
+    // Merge regular attachments and inline image attachments
+    const allAtts = composeAttachments.filter(a => a.content).map(a => ({
+      filename: a.filename, content_type: a.content_type, content: a.content
+    })).concat(inlineAtts);
+    if (allAtts.length) payload.attachments = allAtts;
+    const result = await api('/api/send', { method: 'POST', body: JSON.stringify(payload), timeout: 60000 });
+    hideCompose();
+    document.getElementById('compTo').value = '';
+    document.getElementById('compCc').value = '';
+    document.getElementById('compBcc').value = '';
+    document.getElementById('compSubject').value = '';
+    // Refresh mailbox list (sender address may have been auto-created)
+    loadMailboxes();
+
+    if (result.can_poll && result.sent_id) {
+      // Resend: poll for delivery result
+      startDeliveryPolling(result.sent_id);
+    } else {
+      // CF or other: no delivery polling available — show sent and dismiss
+      _setDeliveryCard('✅', T('email_sent') + (result.method ? ' (' + result.method + ')' : ''), 100, 'var(--success)', null);
+      setTimeout(closeDeliveryCard, 4000);
+    }
+    if (currentFolder === 'sent') loadSentInList();
+  } catch (e) {
+    _setDeliveryCard('❌', T('send_failed'), 0, 'var(--danger)', e.message);
+    toast(e.message, 'error');
+  }
+  finally {
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = origText; }
+  }
+}
+
+/* ====== File Attachments ====== */
+let fileReadQueue = 0;
+
+function handleFileSelect(files) {
+  for (const file of files) {
+    // Add a placeholder with loading state
+    const idx = composeAttachments.length;
+    composeAttachments.push({ filename: file.name, content_type: file.type || 'application/octet-stream', content: null, size: file.size, status: 'loading' });
+    renderComposeAttachments();
+    fileReadQueue++;
+    const reader = new FileReader();
+    reader.onprogress = function(e) {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        const el = document.getElementById('att-progress-' + idx);
+        if (el) el.textContent = pct + '%';
+      }
+    };
+    reader.onload = function(e) {
+      const base64 = e.target.result.split(',')[1];
+      composeAttachments[idx].content = base64;
+      composeAttachments[idx].status = 'ready';
+      fileReadQueue--;
+      renderComposeAttachments();
+    };
+    reader.onerror = function() {
+      composeAttachments[idx].status = 'error';
+      fileReadQueue--;
+      renderComposeAttachments();
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = 'var(--border)';
+  handleFileSelect(e.dataTransfer.files);
+}
+
+function removeComposeAttachment(idx) {
+  composeAttachments.splice(idx, 1);
+  renderComposeAttachments();
+}
+
+function renderComposeAttachments() {
+  var container = document.getElementById('compFileList');
+  container.innerHTML = composeAttachments.map(function(att, i) {
+    var statusIcon = '';
+    var statusStyle = '';
+    if (att.status === 'loading') {
+      statusIcon = '<span style="color:var(--warning);font-size:12px" id="att-progress-' + i + '">...</span>';
+      statusStyle = 'opacity:.7;';
+    } else if (att.status === 'error') {
+      statusIcon = '<span style="color:var(--danger);font-size:12px">\u2717</span>';
+      statusStyle = 'border-color:var(--danger);';
+    } else {
+      statusIcon = '<span style="color:var(--success);font-size:12px">\u2713</span>';
+    }
+    return '<span class="att-item" style="display:inline-flex;align-items:center;gap:4px;' + statusStyle + '">' +
+      statusIcon + '<span class="att-icon">\uD83D\uDCCE</span>' + esc(att.filename) + ' (' + formatSize(att.size) + ')' +
+      '<button class="btn-icon btn-sm" onclick="removeComposeAttachment(' + i + ')" style="color:var(--danger);margin-left:4px">&times;</button></span>';
+  }).join('');
+}
+
+/* ====== Delivery Progress Card ====== */
+var _deliveryCard = null;
+var _deliveryPollTimer = null;
+var _deliveryProgressTimer = null;
+
+function _getDeliveryCard() {
+  if (!_deliveryCard || !document.body.contains(_deliveryCard)) {
+    _deliveryCard = document.createElement('div');
+    _deliveryCard.className = 'delivery-card';
+    _deliveryCard.innerHTML =
+      '<div class="delivery-card-hdr">' +
+        '<span>' + T('delivery_status') + '</span>' +
+        '<button class="btn-icon btn-sm" onclick="closeDeliveryCard()" style="width:24px;height:24px">&times;</button>' +
+      '</div>' +
+      '<div class="delivery-card-body">' +
+        '<div class="delivery-status-row">' +
+          '<span id="dcIcon" style="font-size:16px;flex-shrink:0"></span>' +
+          '<span id="dcMsg" style="flex:1"></span>' +
+        '</div>' +
+        '<div class="delivery-bar-wrap"><div class="delivery-bar-fill" id="dcBar" style="width:0%"></div></div>' +
+        '<div class="delivery-detail" id="dcDetail" style="display:none"></div>' +
+      '</div>';
+    document.body.appendChild(_deliveryCard);
+  }
+  return _deliveryCard;
+}
+
+function _setDeliveryCard(icon, msg, pct, color, detail) {
+  var card = _getDeliveryCard();
+  document.getElementById('dcIcon').textContent = icon;
+  document.getElementById('dcMsg').textContent = msg;
+  var bar = document.getElementById('dcBar');
+  if (pct !== null) bar.style.width = pct + '%';
+  bar.style.background = color || 'var(--primary)';
+  var det = document.getElementById('dcDetail');
+  if (detail) { det.textContent = detail; det.style.display = ''; }
+  else det.style.display = 'none';
+}
+
+function closeDeliveryCard() {
+  if (_deliveryPollTimer)     { clearTimeout(_deliveryPollTimer);  _deliveryPollTimer = null; }
+  if (_deliveryProgressTimer) { clearInterval(_deliveryProgressTimer); _deliveryProgressTimer = null; }
+  if (_deliveryCard && document.body.contains(_deliveryCard)) _deliveryCard.remove();
+  _deliveryCard = null;
+}
+
+function startDeliveryPolling(sentId) {
+  var POLL_INTERVAL  = 4000;   // ms between polls
+  var MAX_DURATION   = 32000;  // total polling window
+  var PROGRESS_START = 42;
+  var PROGRESS_END   = 88;
+  var startTime = Date.now();
+  var terminal = { delivered: 1, bounced: 1, complained: 1 };
+
+  _setDeliveryCard('⏳', T('checking_delivery'), PROGRESS_START, null, null);
+
+  // Smooth progress animation across MAX_DURATION
+  _deliveryProgressTimer = setInterval(function() {
+    var bar = document.getElementById('dcBar');
+    if (!bar) { clearInterval(_deliveryProgressTimer); return; }
+    var elapsed = Date.now() - startTime;
+    var pct = PROGRESS_START + (PROGRESS_END - PROGRESS_START) * Math.min(elapsed / MAX_DURATION, 1);
+    bar.style.width = pct + '%';
+  }, 400);
+
+  function poll() {
+    var elapsed = Date.now() - startTime;
+    if (elapsed >= MAX_DURATION) {
+      clearInterval(_deliveryProgressTimer);
+      _setDeliveryCard('⏱', T('delivery_timeout'), 90, 'var(--text3)', null);
+      setTimeout(closeDeliveryCard, 8000);
+      return;
+    }
+    api('/api/sent/' + sentId + '/status').then(function(data) {
+      var status = data.status || 'sent';
+      if (terminal[status]) {
+        clearInterval(_deliveryProgressTimer);
+        if (status === 'delivered') {
+          _setDeliveryCard('✅', T('status_delivered'), 100, 'var(--success)', null);
+          setTimeout(closeDeliveryCard, 5000);
+        } else if (status === 'bounced') {
+          _setDeliveryCard('❌', T('status_bounced'), 100, 'var(--danger)', data.error || null);
+          // Don't auto-close bounces — user needs to see the reason
+        } else if (status === 'complained') {
+          _setDeliveryCard('⚠️', T('status_complained'), 100, '#e67e22', null);
+          setTimeout(closeDeliveryCard, 8000);
+        }
+        if (currentFolder === 'sent') loadSentInList();
+        return;
+      }
+      if (status === 'delayed') {
+        _setDeliveryCard('🕐', T('status_delayed'), null, 'var(--warning)', null);
+      }
+      _deliveryPollTimer = setTimeout(poll, POLL_INTERVAL);
+    }).catch(function() {
+      _deliveryPollTimer = setTimeout(poll, POLL_INTERVAL); // keep retrying
+    });
+  }
+
+  _deliveryPollTimer = setTimeout(poll, 3500); // first poll after 3.5 s
+}
+
+/* ====== Sent fail badge ====== */
+function updateSentFailBadge(count) {
+  var el = document.getElementById('folderSentFailCount');
+  if (!el) return;
+  if (count > 0) {
+    el.textContent = count;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+/* ====== Sent status helpers ====== */
+function sentStatusBadge(status, provider, large) {
+  var map = {
+    sent:      { color: 'var(--text3)',  label: T('status_sent') },
+    delivered: { color: 'var(--success)', label: T('status_delivered') },
+    bounced:   { color: 'var(--danger)',  label: T('status_bounced') },
+    delayed:   { color: 'var(--warning)', label: T('status_delayed') },
+    complained:{ color: '#e67e22',        label: T('status_complained') },
+    clicked:   { color: 'var(--primary)', label: T('status_clicked') },
+    opened:    { color: 'var(--primary)', label: T('status_opened') },
+  };
+  var info = map[status] || map.sent;
+  var pad = large ? '3px 8px' : '1px 4px';
+  var fs  = large ? '12px' : '10px';
+  return '<span style="font-size:' + fs + ';color:' + info.color + ';border:1px solid ' + info.color + ';border-radius:3px;padding:' + pad + ';white-space:nowrap">' + info.label + (provider && provider !== 'resend' ? ' · ' + provider : '') + '</span>';
+}
+
+async function checkDeliveryStatus(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = T('checking') + '…'; }
+  try {
+    var data = await api('/api/sent/' + id + '/status');
+    // Refresh badge in detail panel
+    var badge = document.getElementById('detailSentBadge');
+    if (badge) badge.innerHTML = sentStatusBadge(data.status || 'sent', null, true);
+    // Show bounce error if returned in next openSentMessage call
+    if (data.error) toast(data.error, 'warning');
+    else toast(T('status_updated') + ': ' + (T('status_' + data.status) || data.status), 'success', 4000);
+    // Refresh the list badge too
+    if (currentFolder === 'sent') loadSentInList();
+  } catch (e) { toast(e.message, 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = T('check_status'); } }
+}
+
+/* ====== Sent (unified in message list) ====== */
+async function loadSentInList(append) {
+  if (msgLoading) return;
+  try {
+    if (!append) { currentPage = 1; msgHasMore = true; }
+    msgLoading = true;
+    let url = '/api/sent?page=' + currentPage + '&limit=50';
+    // Filter by selected mailbox address
+    if (currentMailboxId) {
+      const mbx = mailboxes.find(m => m.id === currentMailboxId);
+      if (mbx) {
+        url += '&from=' + encodeURIComponent(mbx.address);
+      }
+    }
+    const data = await api(url);
+    const newEmails = data.emails || [];
+    if (newEmails.length < 50) msgHasMore = false;
+    // Update fail badge: count bounced + complained
+    updateSentFailBadge(newEmails.filter(function(e) { return e.status === 'bounced' || e.status === 'complained'; }).length);
+    const showFromLabel = !currentMailboxId; // "All" view: show which address sent
+    const container = document.getElementById('msgList');
+
+    const colors = ['#4361ee','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9'];
+    const html = newEmails.map(function(e) {
+      var toAddrs = e.to_addrs;
+      try { toAddrs = JSON.parse(e.to_addrs).join(', '); } catch(ex) {}
+      var fromName = (e.from_name || e.from_addr || '?').split('<')[0].trim() || (e.from_addr || '?').split('@')[0];
+      var initial = fromName[0].toUpperCase();
+      var color = colors[Math.abs(hashStr(e.from_addr || '')) % colors.length];
+      var isActive = currentMessageId === 'sent_' + e.id;
+      var time = formatTime(e.created_at);
+      var snippet = (e.preview || '').trim();
+      return '<div class="msg-item' + (isActive ? ' active' : '') + '" onclick="openSentMessage(' + e.id + ')">' +
+        '<div class="msg-avatar" style="background:' + color + '">' + initial + '</div>' +
+        '<div class="msg-body">' +
+          '<div class="msg-sender">' + esc(e.subject || T('no_subject')) + '</div>' +
+          (snippet ? '<div class="msg-preview">' + esc(snippet) + '</div>' : '') +
+          '<div class="msg-from-to">' +
+            '<div class="msg-ft-row"><span class="msg-ft-label">From</span><span class="msg-ft-val">' + esc(fromName) + '</span></div>' +
+            '<div class="msg-ft-row"><span class="msg-ft-label">To</span><span class="msg-ft-val">' + esc(toAddrs) + '</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="msg-right">' +
+          '<span class="msg-time">' + time + '</span>' +
+          sentStatusBadge(e.status || 'sent', e.send_provider) +
+          '<button class="btn-icon btn-sm" onclick="event.stopPropagation();quickToggleSentFav(' + e.id + ',this)" title="收藏" style="font-size:16px;color:' + (e.is_favorite ? '#e74c3c' : 'var(--text3)') + '">' + (e.is_favorite ? '&#9829;' : '&#9825;') + '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    if (append) {
+      container.insertAdjacentHTML('beforeend', html);
+    } else if (!newEmails.length) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + T('no_emails') + '</div>';
+    } else {
+      container.innerHTML = html;
+    }
+  } catch (e) { console.error(e); }
+  finally { msgLoading = false; }
+}
+
+async function openSentMessage(id) {
+  currentMessageId = 'sent_' + id;
+  currentDetailType = 'sent';
+  if (currentFolder === 'sent') loadSentInList();
+  try {
+    const data = await api('/api/sent/' + id);
+    const e = data.email;
+    document.getElementById('detailEmpty').style.display = 'none';
+    document.getElementById('detailContent').style.display = '';
+    document.getElementById('detailSubject').textContent = e.subject || '(no subject)';
+    document.getElementById('detailFrom').textContent = e.from_addr;
+    let toAddrs = e.to_addrs;
+    try { toAddrs = JSON.parse(e.to_addrs).join(', '); } catch(ex) {}
+    document.getElementById('detailTo').textContent = toAddrs;
+    document.getElementById('detailTime').textContent = parseUtcDate(e.created_at).toLocaleString();
+    const badge = document.getElementById('detailSentBadge');
+    badge.style.display = '';
+    badge.innerHTML = sentStatusBadge(e.status || 'sent', e.send_provider, true);
+    // "Check delivery status" button — static in HTML, just configure it
+    var checkBtn = document.getElementById('sentCheckStatusBtn');
+    if (checkBtn) {
+      if (e.send_provider === 'resend' && e.resend_id) {
+        checkBtn.style.display = '';
+        checkBtn.textContent = T('check_status');
+        checkBtn.disabled = false;
+        checkBtn.onclick = function() { checkDeliveryStatus(e.id, checkBtn); };
+      } else {
+        checkBtn.style.display = 'none';
+      }
+    }
+    // Show delivery_error if present
+    var errEl = document.getElementById('sentDeliveryError');
+    if (!errEl) {
+      errEl = document.createElement('div');
+      errEl.id = 'sentDeliveryError';
+      errEl.style.cssText = 'font-size:12px;color:var(--danger);margin-top:6px;padding:4px 8px;background:rgba(231,76,60,.08);border-radius:4px';
+      document.getElementById('detailContent').insertBefore(errEl, document.getElementById('detailCode'));
+    }
+    if (e.delivery_error) {
+      errEl.textContent = e.delivery_error;
+      errEl.style.display = '';
+    } else {
+      errEl.style.display = 'none';
+    }
+    const favBtn = document.getElementById('detailFavBtn');
+    if (favBtn) {
+      favBtn.style.display = '';
+      favBtn.onclick = toggleSentFavorite;
+      const favIcon = document.getElementById('detailFavIcon');
+      if (favIcon) favIcon.innerHTML = e.is_favorite ? '&#9829;' : '&#9825;';
+      favBtn.style.color = e.is_favorite ? '#e74c3c' : '';
+    }
+    document.getElementById('detailCode').style.display = 'none';
+
+    // Show sent attachments
+    const attEl = document.getElementById('detailAttachments');
+    const sentAtts = data.attachments || [];
+    if (sentAtts.length) {
+      attEl.style.display = '';
+      attEl.innerHTML = '<div class="card-title">' + T('attachments') + '</div>' + sentAtts.map(function(a) {
+        return '<span class="att-item" onclick="downloadSentAttachment(' + a.id + ', \'' + esc(a.filename) + '\')"><span class="att-icon">\uD83D\uDCCE</span>' + esc(a.filename) + ' (' + formatSize(a.size) + ')</span>';
+      }).join('');
+    } else {
+      attEl.style.display = 'none';
+    }
+
+    const bodyEl = document.getElementById('detailBody');
+    if (e.html_content) {
+      bodyEl.innerHTML = '<iframe sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="' + esc(e.html_content).replace(/"/g, '&quot;') + '"></iframe>';
+      setTimeout(function() {
+        var f = bodyEl.querySelector('iframe');
+        if (f) f.style.height = (f.contentDocument?.body?.scrollHeight || 400) + 'px';
+      }, 200);
+    } else {
+      bodyEl.innerHTML = '<pre style="white-space:pre-wrap;word-break:break-word">' + esc(e.text_content || '') + '</pre>';
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function loadFavoriteMessages(append) {
+  if (msgLoading) return;
+  const container = document.getElementById('msgList');
+  try {
+    if (!append) { currentPage = 1; msgHasMore = true; }
+    msgLoading = true;
+    let url = '/api/messages?is_favorite=1&page=' + currentPage + '&limit=50';
+    if (currentMailboxId) url += '&mailbox_id=' + currentMailboxId;
+    let sentFavUrl = '/api/sent?is_favorite=1&page=' + currentPage + '&limit=50';
+    if (currentMailboxId) {
+      const mbx = mailboxes.find(m => m.id === currentMailboxId);
+      if (mbx) sentFavUrl += '&from=' + encodeURIComponent(mbx.address);
+    }
+    const [inboxData, sentData] = await Promise.all([
+      api(url),
+      api(sentFavUrl).catch(() => ({ emails: [] }))
+    ]);
+    const inboxMsgs = (inboxData.messages || []);
+    const sentMsgs = (sentData.emails || []).filter(e => e.is_favorite).map(e => {
+      var toAddrs = e.to_addrs;
+      try { toAddrs = JSON.parse(e.to_addrs).join(', '); } catch(ex) {}
+      return {
+        _sentItem: true,
+        id: 'sent_' + e.id,
+        _sentId: e.id,
+        subject: e.subject,
+        sender: e.from_name || e.from_addr,
+        to_addr: toAddrs,
+        received_at: e.created_at,
+        is_favorite: 1,
+        is_read: 1,
+        preview: (e.preview || '').trim(),
+        _status: e.status,
+        _provider: e.send_provider
+      };
+    });
+    const newMsgs = [...inboxMsgs, ...sentMsgs].sort((a, b) =>
+      new Date(b.received_at) - new Date(a.received_at)
+    );
+    if (newMsgs.length < 50) msgHasMore = false;
+    if (append) {
+      currentMessages = currentMessages.concat(newMsgs);
+    } else {
+      currentMessages = newMsgs;
+    }
+    const favCount = currentMessages.length;
+    const favEl = document.getElementById('folderFavCount');
+    if (favEl) { if (favCount > 0) { favEl.textContent = favCount; favEl.style.display = ''; } else { favEl.style.display = 'none'; } }
+    if (!currentMessages.length) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + T('no_favorites') + '</div>';
+      return;
+    }
+    renderFavoriteMessages();
+  } catch (e) { console.error(e); }
+  finally { msgLoading = false; }
+}
+
+function renderFavoriteMessages() {
+  const container = document.getElementById('msgList');
+  if (!currentMessages.length) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + T('no_favorites') + '</div>';
+    return;
+  }
+  const colors = ['#4361ee','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9'];
+  container.innerHTML = currentMessages.map(m => {
+    if (m._sentItem) {
+      const fromName = (m.sender || '').split('<')[0].trim() || (m.sender || '').split('@')[0] || '?';
+      const initial = fromName[0]?.toUpperCase() || '?';
+      const color = colors[Math.abs(hashStr(m.sender || '')) % colors.length];
+      const isActive = currentMessageId === m.id;
+      const time = formatTime(m.received_at);
+      const sentId = m._sentId;
+      return '<div class="msg-item' + (isActive ? ' active' : '') + '" onclick="openSentMessage(' + sentId + ')">' +
+        '<div class="msg-avatar" style="background:' + color + '">' + initial + '</div>' +
+        '<div class="msg-body">' +
+          '<div class="msg-sender">' + esc(m.subject || T('no_subject')) + '</div>' +
+          (m.preview ? '<div class="msg-preview">' + esc(m.preview) + '</div>' : '') +
+          '<div class="msg-from-to">' +
+            '<div class="msg-ft-row"><span class="msg-ft-label">From</span><span class="msg-ft-val">' + esc(fromName) + '</span></div>' +
+            '<div class="msg-ft-row"><span class="msg-ft-label">To</span><span class="msg-ft-val">' + esc(m.to_addr || '') + '</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="msg-right">' +
+          '<span class="msg-time">' + time + '</span>' +
+          sentStatusBadge(m._status || 'sent', m._provider) +
+          '<button class="btn-icon btn-sm" onclick="event.stopPropagation();quickToggleSentFav(' + sentId + ',this)" title="收藏" style="font-size:16px;color:#e74c3c">&#9829;</button>' +
+        '</div>' +
+      '</div>';
+    }
+    const senderName = (m.sender || '').split('<')[0].trim() || (m.sender || '').split('@')[0] || '?';
+    const initial = senderName[0]?.toUpperCase() || '?';
+    const color = colors[Math.abs(hashStr(m.sender || '')) % colors.length];
+    const isActive = m.id === currentMessageId;
+    const time = formatTime(m.received_at);
+    const toDisplay = m.to_addr || '';
+    return '<div class="msg-item' + (isActive ? ' active' : '') + (!m.is_read ? ' unread' : '') + '" onclick="openMessage(' + m.id + ')">' +
+      '<div class="msg-avatar" style="background:' + color + '">' + initial + '</div>' +
+      '<div class="msg-body">' +
+        '<div class="msg-sender">' + esc(m.subject || T('no_subject')) + '</div>' +
+        (m.preview ? '<div class="msg-preview">' + esc(m.preview) + '</div>' : '') +
+        '<div class="msg-from-to">' +
+          '<div class="msg-ft-row"><span class="msg-ft-label">From</span><span class="msg-ft-val">' + esc(senderName) + '</span></div>' +
+          (toDisplay ? '<div class="msg-ft-row"><span class="msg-ft-label">To</span><span class="msg-ft-val">' + esc(toDisplay) + '</span></div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="msg-right">' +
+        '<span class="msg-time">' + time + '</span>' +
+        '<button class="btn-icon btn-sm" onclick="event.stopPropagation();quickToggleFav(' + m.id + ',this)" title="收藏" style="font-size:16px;color:#e74c3c">&#9829;</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function toggleMsgFavorite() {
+  if (!currentMessageId || typeof currentMessageId === 'string') return;
+  try {
+    const data = await api('/api/messages/' + currentMessageId + '/favorite', { method: 'POST' });
+    const favIcon = document.getElementById('detailFavIcon');
+    const favBtn = document.getElementById('detailFavBtn');
+    if (favIcon) favIcon.innerHTML = data.is_favorite ? '&#9829;' : '&#9825;';
+    if (favBtn) favBtn.style.color = data.is_favorite ? '#e74c3c' : '';
+    const msg = currentMessages.find(m => m.id === currentMessageId);
+    if (msg) msg.is_favorite = data.is_favorite;
+    if (currentFolder === 'favorites' && !data.is_favorite) {
+      loadFavoriteMessages();
+      closeDetail();
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function toggleSentFavorite() {
+  const sentId = typeof currentMessageId === 'string' && currentMessageId.startsWith('sent_')
+    ? parseInt(currentMessageId.replace('sent_', ''))
+    : null;
+  if (!sentId) return;
+  try {
+    const data = await api('/api/sent/' + sentId + '/favorite', { method: 'POST' });
+    const favIcon = document.getElementById('detailFavIcon');
+    const favBtn = document.getElementById('detailFavBtn');
+    if (favIcon) favIcon.innerHTML = data.is_favorite ? '&#9829;' : '&#9825;';
+    if (favBtn) favBtn.style.color = data.is_favorite ? '#e74c3c' : '';
+    if (currentFolder === 'favorites' && !data.is_favorite) {
+      loadFavoriteMessages();
+      closeDetail();
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function quickToggleSentFav(sentId, btn) {
+  try {
+    const data = await api('/api/sent/' + sentId + '/favorite', { method: 'POST' });
+    if (btn) {
+      btn.innerHTML = data.is_favorite ? '&#9829;' : '&#9825;';
+      btn.style.color = data.is_favorite ? '#e74c3c' : 'var(--text3)';
+    }
+    if (currentMessageId === 'sent_' + sentId) {
+      const favIcon = document.getElementById('detailFavIcon');
+      const favBtn = document.getElementById('detailFavBtn');
+      if (favIcon) favIcon.innerHTML = data.is_favorite ? '&#9829;' : '&#9825;';
+      if (favBtn) favBtn.style.color = data.is_favorite ? '#e74c3c' : '';
+    }
+    if (currentFolder === 'favorites' && !data.is_favorite) {
+      currentMessages = currentMessages.filter(m => m.id !== 'sent_' + sentId);
+      renderFavoriteMessages();
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function quickToggleFav(msgId, btn) {
+  try {
+    const data = await api('/api/messages/' + msgId + '/favorite', { method: 'POST' });
+    const msg = currentMessages.find(m => m.id === msgId);
+    if (msg) msg.is_favorite = data.is_favorite;
+    if (btn) {
+      btn.innerHTML = data.is_favorite ? '&#9829;' : '&#9825;';
+      btn.style.color = data.is_favorite ? '#e74c3c' : 'var(--text3)';
+    }
+    if (currentMessageId === msgId) {
+      const favIcon = document.getElementById('detailFavIcon');
+      const favBtn = document.getElementById('detailFavBtn');
+      if (favIcon) favIcon.innerHTML = data.is_favorite ? '&#9829;' : '&#9825;';
+      if (favBtn) favBtn.style.color = data.is_favorite ? '#e74c3c' : '';
+    }
+    if (currentFolder === 'favorites' && !data.is_favorite) {
+      currentMessages = currentMessages.filter(m => m.id !== msgId);
+      renderMessages();
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function renderDeletedPlaceholder() { loadTrash(); }
+
+async function loadTrash(append) {
+  if (msgLoading) return;
+  try {
+    if (!append) { currentPage = 1; msgHasMore = true; }
+    msgLoading = true;
+    let url = '/api/trash?page=' + currentPage + '&limit=50';
+    if (currentMailboxId) url += '&mailbox_id=' + currentMailboxId;
+    const data = await api(url);
+    const items = data.items || [];
+    const container = document.getElementById('msgList');
+    const countEl = document.getElementById('folderDeletedCount');
+    if (countEl) {
+      if (data.total > 0) { countEl.textContent = data.total; countEl.style.display = ''; }
+      else { countEl.style.display = 'none'; }
+    }
+    if (!items.length) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + T('no_deleted') + '</div>';
+      return;
+    }
+    var html = '<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+    html += '<button class="btn btn-ghost btn-sm" onclick="restoreAllTrashItems()" title="' + T('trash_restore_all') + '">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> ';
+    html += T('trash_restore_all') + '</button>';
+    html += '<button class="btn btn-danger btn-sm" onclick="clearAllTrash()">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> ';
+    html += T('trash_clear_all') + '</button>';
+    html += '<span style="font-size:12px;color:var(--text3);margin-left:auto">' + data.total + ' ' + T('trash_stat') + '</span>';
+    html += '</div>';
+    const colors = ['#4361ee','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9'];
+    var itemsHtml = items.map(function(item) {
+      var isSent = item.type === 'sent';
+      var senderName = (item.sender || '').split('<')[0].trim() || (item.sender || '').split('@')[0] || '?';
+      var toDisplay = item.to_addr || '';
+      if (isSent) { try { toDisplay = JSON.parse(item.to_addr).join(', '); } catch(ex) {} }
+      var initial = senderName[0]?.toUpperCase() || '?';
+      var color = colors[Math.abs(hashStr(item.sender || '')) % colors.length];
+      var time = formatTime(item.date);
+      var typeLabel = isSent ? T('trash_type_sent') : T('trash_type_inbox');
+      var typeBg = isSent ? 'var(--primary-light)' : 'var(--bg3)';
+      var typeColor = isSent ? 'var(--primary)' : 'var(--text3)';
+      var previewText = isSent ? '' : (item.preview || '');
+      return '<div class="msg-item" data-trash-id="' + item.id + '" data-trash-type="' + item.type + '">' +
+        '<div class="msg-avatar" style="background:' + color + '">' + initial + '</div>' +
+        '<div class="msg-body">' +
+          '<div class="msg-sender">' + esc(item.subject || T('no_subject')) + '</div>' +
+          (previewText ? '<div class="msg-preview">' + esc(previewText) + '</div>' : '') +
+          '<div class="msg-from-to">' +
+            '<div class="msg-ft-row"><span class="msg-ft-label">From</span><span class="msg-ft-val">' + esc(senderName) + '</span></div>' +
+            (toDisplay ? '<div class="msg-ft-row"><span class="msg-ft-label">To</span><span class="msg-ft-val">' + esc(toDisplay) + '</span></div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="msg-right">' +
+          '<span class="msg-time">' + time + '</span>' +
+          '<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:' + typeBg + ';color:' + typeColor + '">' + typeLabel + '</span>' +
+          '<div style="display:flex;gap:2px">' +
+            '<button class="btn-icon btn-sm" onclick="restoreTrashItem(' + item.id + ',\'' + item.type + '\')" title="' + T('trash_restore') + '" style="color:var(--success)">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>' +
+            '</button>' +
+            '<button class="btn-icon btn-sm" onclick="permanentDeleteItem(' + item.id + ',\'' + item.type + '\')" title="' + T('trash_permanent_delete') + '" style="color:var(--danger)">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    var newItems = items.length;
+    if (newItems < 50) msgHasMore = false;
+    if (append) {
+      container.insertAdjacentHTML('beforeend', itemsHtml);
+    } else if (!items.length) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + T('no_deleted') + '</div>';
+    } else {
+      container.innerHTML = html + itemsHtml;
+    }
+  } catch (e) { console.error(e); }
+  finally { msgLoading = false; }
+}
+
+async function restoreTrashItem(id, type) {
+  try {
+    await api('/api/trash/restore', { method: 'POST', body: JSON.stringify({ items: [{ id: id, type: type }] }) });
+    toast(T('trash_restored'), 'success');
+    loadTrash();
+    loadMailboxes();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function restoreAllTrashItems() {
+  try {
+    const data = await api('/api/trash?page=1&limit=1000');
+    const items = (data.items || []).map(function(i) { return { id: i.id, type: i.type }; });
+    if (!items.length) return;
+    await api('/api/trash/restore', { method: 'POST', body: JSON.stringify({ items: items }) });
+    toast(T('trash_restored'), 'success');
+    loadTrash();
+    loadMailboxes();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function permanentDeleteItem(id, type) {
+  if (!confirm(T('trash_permanent_confirm'))) return;
+  try {
+    await api('/api/trash/permanent', { method: 'POST', body: JSON.stringify({ items: [{ id: id, type: type }] }) });
+    toast(T('trash_deleted'), 'success');
+    loadTrash();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function clearAllTrash() {
+  if (!confirm(T('trash_clear_confirm'))) return;
+  try {
+    await api('/api/trash/clear', { method: 'POST', body: JSON.stringify({}) });
+    toast(T('trash_cleared'), 'success');
+    loadTrash();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteSentEmail(id) {
+  if (!confirm('Delete?')) return;
+  try { await api('/api/sent/' + id, { method: 'DELETE' }); loadSentInList(); toast('Deleted', 'success'); } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ====== Domains ====== */
+var domainVerifyTimer = null;
+var cachedDomainProvider = 'resend';
+
+async function loadDomains() {
+  try {
+    const data = await api('/api/domains');
+    const container = document.getElementById('domainList');
+    const provider = data.domain_provider || 'resend';
+    cachedDomainProvider = provider;
+    
+    // Sync UI components
+    const guideCard = document.getElementById('setupGuideCard');
+    const providerSel = document.getElementById('s_domain_provider');
+    if (providerSel) providerSel.value = provider;
+    
+    const resend = data.resend || [];
+    const cfEsDomains = data.cf_email_service || [];
+    const configuredDomains = provider === 'cf' ? cfEsDomains : resend;
+    const cfZones = data.cloudflare || [];
+    const sel = document.getElementById('newDomainSelect');
+
+    // Show guide card in sidebar only when on domains page with no domains configured
+    if (guideCard) guideCard.style.display = (currentView === 'domains' && configuredDomains.length === 0) ? 'block' : 'none';
+
+    if (!cfZones.length && !configuredDomains.length) {
+      sel.innerHTML = '<option value="">' + T('no_cf_zones') + '</option>';
+      container.innerHTML = '<div style="padding:12px;background:#fff3cd;border-radius:8px;font-size:12px;color:#856404;line-height:1.8">'
+        + '<b>' + T('setup_guide_title') + '</b><br>'
+        + T('setup_guide_step1') + '<br>'
+        + T('setup_guide_step2') + '<br>'
+        + T('setup_guide_step3') + '<br>'
+        + T('setup_guide_step4')
+        + '</div>';
+      return;
+    }
+    const configuredNames = new Set(configuredDomains.map(function(d) { return d.name; }));
+    const available = cfZones.filter(function(z) { return !configuredNames.has(z.name); });
+    if (available.length) {
+      sel.innerHTML = '<option value="">' + T('select_domain') + '</option>' + available.map(function(z) { return '<option value="' + esc(z.id) + '|' + esc(z.name) + '">' + esc(z.name) + '</option>'; }).join('');
+    } else if (cfZones.length) {
+      sel.innerHTML = '<option value="">' + T('all_domains_added') + '</option>';
+    } else {
+      sel.innerHTML = '<option value="">' + T('no_cf_zones') + '</option>';
+    }
+    // Show subdomain input when a zone is selected
+    var subInput = document.getElementById('customSubdomain');
+    var subHint = document.getElementById('domainInputHint');
+    sel.onchange = function() {
+      if (sel.value) { subInput.style.display = ''; subHint.style.display = ''; }
+      else { subInput.style.display = 'none'; subHint.style.display = 'none'; subInput.value = ''; }
+    };
+    const dnsDetail = document.getElementById('dnsDetailPanel');
+    const openDnsDomainId = dnsDetail ? dnsDetail.dataset.domainId : null;
+    if (!configuredDomains.length) { container.innerHTML = '<div style="color:var(--text3);padding:12px 0">' + T('no_domains_configured') + '</div>'; return; }
+    container.innerHTML = configuredDomains.map(function(d) {
+      return '<div class="domain-item">' +
+        '<div><span class="domain-name">' + esc(d.name) + '</span></div>' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<span class="domain-status ' + (d.status === 'verified' ? 'verified' : 'pending') + '">' + d.status + '</span>' +
+          (d.status !== 'verified' ? '<span style="font-size:11px;color:var(--text3)">' + T('auto_verifying') + '</span>' : '') +
+          '<button class="btn btn-ghost btn-sm" onclick="viewDns(\'' + d.id + '\', \'' + (d.zone_id || '') + '\')">' + T('dns') + '</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="disableDomain(\'' + d.id + '\', \'' + (d.zone_id || '') + '\')">' + T('remove') + '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    if (openDnsDomainId && dnsDetail) {
+      document.getElementById('domainList').insertAdjacentElement('afterend', dnsDetail);
+    }
+    const hasPending = configuredDomains.some(function(d) { return d.status !== 'verified'; });
+    if (hasPending) {
+      if (!domainVerifyTimer) {
+        domainVerifyTimer = setInterval(async function() {
+          const page = document.getElementById('domainsPage');
+          if (page && page.style.display !== 'none') {
+            const fresh = await api('/api/domains');
+            const freshProvider = fresh.domain_provider || 'resend';
+            const freshDomains = freshProvider === 'cf' ? (fresh.cf_email_service || []) : (fresh.resend || []);
+            const pending = freshDomains.filter(function(d) { return d.status !== 'verified'; });
+            for (const d of pending) {
+              try { await api('/api/domains/verify', { method: 'POST', body: JSON.stringify({ domain_id: d.id, zone_id: d.zone_id || '' }) }); } catch(e2) {}
+            }
+            const updated = pending.length > 0 ? await api('/api/domains') : fresh;
+            const updatedProvider = updated.domain_provider || 'resend';
+            const allDomains = updatedProvider === 'cf' ? (updated.cf_email_service || []) : (updated.resend || []);
+            if (allDomains.every(function(d) { return d.status === 'verified'; })) {
+              clearInterval(domainVerifyTimer); domainVerifyTimer = null;
+            }
+            const items = document.querySelectorAll('.domain-item');
+            items.forEach(function(item, i) {
+              if (allDomains[i]) {
+                const badge = item.querySelector('.domain-status');
+                if (badge) {
+                  badge.textContent = allDomains[i].status;
+                  badge.className = 'domain-status ' + (allDomains[i].status === 'verified' ? 'verified' : 'pending');
+                }
+              }
+            });
+          }
+        }, 15000);
+      }
+    } else {
+      if (domainVerifyTimer) { clearInterval(domainVerifyTimer); domainVerifyTimer = null; }
+    }
+  } catch (e) { console.error(e); }
+}
+
+async function enableDomain() {
+  const sel = document.getElementById('newDomainSelect');
+  const val = sel.value;
+  if (!val) return toast(T('select_a_domain'), 'error');
+  const parts = val.split('|');
+  const zoneId = parts[0];
+  const zoneName = parts[1];
+  if (!zoneId || !zoneName) return toast(T('select_a_domain'), 'error');
+  // Build final domain: if subdomain specified, prepend it
+  const subInput = document.getElementById('customSubdomain');
+  const sub = subInput ? subInput.value.trim().replace(/\.$/, '') : '';
+  const domain = sub ? sub + '.' + zoneName : zoneName;
+  const btn = document.getElementById('addDomainBtn');
+  const progress = document.getElementById('domainProgress');
+  btn.disabled = true;
+  btn.textContent = T('setting_up');
+  progress.style.display = 'block';
+  
+  // Clear cached domains list to force refresh when creating mailbox
+  localStorage.removeItem('mailhub_domains_cache');
+  const domainProvider = cachedDomainProvider || 'resend';
+  const steps = domainProvider === 'cf'
+    ? [T('step_cf_send'), T('step_dns'), T('step_routing'), T('step_verify')]
+    : [T('step_resend'), T('step_dns'), T('step_routing'), T('step_verify')];
+  progress.innerHTML = steps.map(function(s, i) {
+    return '<div id="dStep' + i + '" style="padding:4px 0;color:var(--text3)">' +
+      '<span class="step-icon" style="display:inline-block;width:18px;text-align:center">&#9679;</span> ' + s +
+      '<span id="dStepDetail' + i + '" style="font-size:11px;color:var(--text3);margin-left:4px"></span>' +
+    '</div>';
+  }).join('');
+
+  function markStep(idx, status, detail) {
+    var el = document.getElementById('dStep' + idx);
+    if (!el) return;
+    var detailEl = document.getElementById('dStepDetail' + idx);
+    if (status === 'running') { el.style.color = 'var(--text2)'; el.querySelector('.step-icon').innerHTML = '&#8987;'; }
+    else if (status === 'ok') { el.style.color = 'var(--primary)'; el.querySelector('.step-icon').innerHTML = '&#10003;'; }
+    else if (status === 'error') { el.style.color = 'var(--danger)'; el.querySelector('.step-icon').innerHTML = '&#10007;'; }
+    else if (status === 'skip') { el.style.color = 'var(--text3)'; el.querySelector('.step-icon').innerHTML = '&#8212;'; }
+    if (detailEl && detail) detailEl.textContent = detail;
+  }
+
+  var domainId = null;
+  var hasError = false;
+
+  // Step 1: Add to send service (Resend or CF Email Service)
+    markStep(0, 'running');
+  try {
+    var data = await api('/api/domains/enable', { method: 'POST', body: JSON.stringify({ domain: domain, zone_id: zoneId }) });
+    domainId = data.domain?.id;
+    markStep(0, 'ok', '(ID: ' + (domainId || '?') + ')');
+    // Refresh domains immediately after enabling
+    await loadDomains();
+  } catch (e) { markStep(0, 'error', e.message); hasError = true; }
+
+  // Step 2: Create DNS records (CF Email Service auto-manages DNS)
+  var dnsError = false;
+  if (domainProvider === 'cf') {
+    markStep(1, 'ok', '(auto-managed by CF)');
+  } else if (domainId) {
+    markStep(1, 'running');
+    try {
+      var data2 = await api('/api/domains/auto-dns', { method: 'POST', body: JSON.stringify({ domain_id: domainId, domain_name: domain, zone_id: zoneId }), timeout: 45000 });
+      var results = data2.results || [];
+      var created = results.filter(function(r) { return r.status === 'created'; }).length;
+      var updated = results.filter(function(r) { return r.status === 'updated'; }).length;
+      var existed = results.filter(function(r) { return r.status === 'exists'; }).length;
+      var failed = results.filter(function(r) { return r.status === 'failed' || r.status === 'error'; });
+      var detail = '';
+      if (created) detail += created + ' ' + T('created_records');
+      if (updated) detail += (detail ? ', ' : '') + updated + ' ' + T('updated');
+      if (existed) detail += (detail ? ', ' : '') + existed + ' ' + T('existed_records');
+      if (failed.length) {
+        var firstErr = failed[0];
+        var errInfo = firstErr.error || firstErr.message || T('failed');
+        detail += (detail ? ', ' : '') + failed.length + ' ' + T('failed') + ': ' + errInfo;
+      }
+      if (!created && !updated && !existed && !failed.length) detail = T('no_records_returned');
+      markStep(1, failed.length ? 'error' : (created || updated || existed ? 'ok' : 'error'), detail ? '(' + detail + ')' : '');
+      if (failed.length) { dnsError = true; console.error('DNS creation details:', JSON.stringify(results)); }
+    } catch (e) { markStep(1, 'error', e.message); dnsError = true; }
+  } else if (!hasError) {
+    markStep(1, 'skip', T('no_cf_token'));
+  }
+
+  // Step 3: Configure Email Routing
+  if (!hasError) {
+    markStep(2, 'running');
+    try {
+      try {
+        var status = await api('/api/email-routing/status?domain=' + encodeURIComponent(domain) + '&zone_id=' + encodeURIComponent(zoneId), { timeout: 15000 });
+        if (status.enabled && status.catch_all && status.mx_configured) {
+          markStep(2, 'ok', '(' + T('already_configured') + ')');
+          markStep(3, 'running');
+          if (domainId) { await api('/api/domains/verify', { method: 'POST', body: JSON.stringify({ domain_id: domainId, zone_id: zoneId }) }); }
+          markStep(3, 'ok');
+          toast(dnsError ? T('domain_setup_partial') : T('domain_setup_complete'), dnsError ? 'warning' : 'success');
+          loadDomains(); btn.disabled = false; btn.textContent = T('add');
+          return;
+        }
+      } catch (e3) { /* status check failed, proceed */ }
+      var data3 = await api('/api/email-routing/setup', { method: 'POST', body: JSON.stringify({ domain: domain, zone_id: zoneId }), timeout: 45000 });
+      var results3 = data3.results || [];
+      var criticalErrors = results3.filter(function(r) { return r.status === 'error' || r.status === 'failed'; });
+      var detail3 = '';
+      var catchAll = results3.find(function(r) { return r.step === 'catch_all_rule'; });
+      if (catchAll) {
+        if (catchAll.status === 'created') detail3 += 'Catch-all ' + T('created_records');
+        else if (catchAll.status === 'updated') detail3 += 'Catch-all ' + T('updated');
+        else if (catchAll.status === 'exists') detail3 += 'Catch-all ' + T('already_configured');
+        else if (catchAll.status === 'error' || catchAll.status === 'failed') detail3 += 'Catch-all: ' + (catchAll.error || T('failed'));
+      }
+      var mxResults = results3.filter(function(r) { return r.step === 'mx_record'; });
+      if (mxResults.length) {
+        var mxCreated = mxResults.filter(function(r) { return r.status === 'created'; }).length;
+        var mxExists = mxResults.filter(function(r) { return r.status === 'exists'; }).length;
+        var mxFailed = mxResults.filter(function(r) { return r.status === 'error' || r.status === 'failed'; }).length;
+        var mxParts = [];
+        if (mxCreated) mxParts.push(mxCreated + ' ' + T('created_records'));
+        if (mxExists) mxParts.push(mxExists + ' ' + T('existed_records'));
+        if (mxFailed) mxParts.push(mxFailed + ' ' + T('failed'));
+        detail3 += (detail3 ? ', ' : '') + 'MX: ' + mxParts.join('/');
+      }
+      markStep(2, criticalErrors.length ? 'error' : 'ok', detail3 ? '(' + detail3 + ')' : '');
+    } catch (e) { markStep(2, 'error', e.message); }
+  }
+
+  // Step 4: Trigger verification
+  markStep(3, 'running');
+  if (domainId) {
+    try { await api('/api/domains/verify', { method: 'POST', body: JSON.stringify({ domain_id: domainId, zone_id: zoneId }) }); markStep(3, 'ok'); }
+    catch (e) { markStep(3, 'error', e.message); }
+  } else { markStep(3, 'skip'); }
+  toast((hasError || dnsError) ? T('domain_setup_partial') : T('domain_setup_complete'), (hasError || dnsError) ? 'warning' : 'success');
+  loadDomains(); btn.disabled = false; btn.textContent = T('add');
+}
+
+async function disableDomain(id, zoneId) {
+  if (!confirm(T('remove_domain_confirm'))) return;
+  try {
+    var data = await api('/api/domains/disable', { method: 'POST', body: JSON.stringify({ domain_id: id, zone_id: zoneId || '' }), timeout: 30000 });
+    loadDomains();
+    var c = data.cleanup || {};
+    var details = [];
+    if (c.dns_deleted) details.push('DNS: ' + c.dns_deleted + ' deleted');
+    if (c.email_routing_deleted) details.push('Email Routing: cleared');
+    if (c.dns_errors && c.dns_errors.length) details.push('\u26A0 ' + c.dns_errors.length + ' errors');
+    toast(T('domain_removed') + (details.length ? ' (' + details.join(', ') + ')' : ''), c.dns_errors && c.dns_errors.length ? 'warning' : 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+var dnsRefreshTimer = null;
+
+async function viewDns(id, zoneId) {
+  var existing = document.getElementById('dnsDetailPanel');
+  if (existing && existing.dataset.domainId === id) {
+    existing.remove();
+    if (dnsRefreshTimer) { clearInterval(dnsRefreshTimer); dnsRefreshTimer = null; }
+    return;
+  }
+  await renderDnsPanel(id, zoneId);
+  if (dnsRefreshTimer) clearInterval(dnsRefreshTimer);
+  dnsRefreshTimer = setInterval(async function() {
+    var panel = document.getElementById('dnsDetailPanel');
+    if (!panel || panel.dataset.domainId !== id) { clearInterval(dnsRefreshTimer); dnsRefreshTimer = null; return; }
+    await renderDnsPanel(id, zoneId);
+  }, 10000);
+}
+
+async function renderDnsPanel(id, zoneId) {
+  try {
+    var data = await api('/api/domains/dns?domain_id=' + id + (zoneId ? '&zone_id=' + encodeURIComponent(zoneId) : ''));
+    var d = data.domain;
+    var records = d.records || [];
+    var allVerified = records.length > 0 && records.every(function(r) { return r.status === 'verified'; });
+    var html = '<div class="card" id="dnsDetailPanel" data-domain-id="' + id + '" style="margin-top:16px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center"><div class="card-title" style="margin:0">' + T('dns_records_for') + esc(d.name) + '</div><button class="btn-icon" onclick="closeDnsPanel()" style="font-size:18px">&times;</button></div>';
+    html += '<div id="routingStatusBox" style="margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:6px;font-size:12px;color:var(--text3)">' + T('step_routing') + ' <span id="routingStatusIndicator">...</span></div>';
+    html += '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:12px"><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">Type</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">Name</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">Value</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">Status</th></tr>';
+    records.forEach(function(r) {
+      html += '<tr><td style="padding:6px;border-bottom:1px solid var(--border)">' + (r.record_type || r.type) + '</td><td style="padding:6px;border-bottom:1px solid var(--border);word-break:break-all">' + esc(r.name || '') + '</td><td style="padding:6px;border-bottom:1px solid var(--border);word-break:break-all;max-width:300px">' + esc(r.value || r.expected_value || '') + '</td><td style="padding:6px;border-bottom:1px solid var(--border)"><span class="domain-status ' + (r.status === 'verified' ? 'verified' : 'pending') + '">' + (r.status || 'pending') + '</span></td></tr>';
+    });
+    html += '</table></div>';
+    var prev = document.getElementById('dnsDetailPanel');
+    if (prev) prev.remove();
+    document.getElementById('domainList').insertAdjacentHTML('afterend', html);
+    if (allVerified && dnsRefreshTimer) { clearInterval(dnsRefreshTimer); dnsRefreshTimer = null; }
+    // Async load email routing status
+    try {
+      var routingStatus = await api('/api/email-routing/status?domain=' + encodeURIComponent(d.name) + (zoneId ? '&zone_id=' + encodeURIComponent(zoneId) : ''));
+      var indicator = document.getElementById('routingStatusIndicator');
+      if (indicator) {
+        var rParts = [];
+        if (routingStatus.enabled) rParts.push('<span class="domain-status verified">' + T('routing_already_enabled') + '</span>');
+        else rParts.push('<span class="domain-status pending">\u26A0 ' + T('routing_not_enabled') + '</span>');
+        if (routingStatus.catch_all) {
+          rParts.push('Catch-all: <span class="domain-status verified">\u2713 Worker</span>' + (routingStatus.catch_all_worker ? ' \u2192 ' + esc(routingStatus.catch_all_worker) : ''));
+        } else if (routingStatus.catch_all_action_type) {
+          rParts.push('Catch-all: <span class="domain-status pending">\u26A0 ' + esc(routingStatus.catch_all_action_type) + '</span>');
+        } else {
+          rParts.push('Catch-all: <span class="domain-status pending">\u2717</span>' + (routingStatus.catch_all_error ? ' <span style="font-size:10px;color:var(--danger)">(' + esc(routingStatus.catch_all_error) + ')</span>' : ''));
+        }
+        if (routingStatus.mx_configured) rParts.push('MX: <span class="domain-status verified">\u2713</span>');
+        else rParts.push('MX: <span class="domain-status pending">\u2717</span>' + (routingStatus.mx_error ? ' <span style="font-size:10px;color:var(--danger)">(' + esc(routingStatus.mx_error) + ')</span>' : ''));
+        indicator.innerHTML = rParts.join(' &nbsp;|&nbsp; ');
+        var issues = [];
+        if (routingStatus.catch_all_error) issues.push('Catch-all API error: ' + routingStatus.catch_all_error);
+        else if (!routingStatus.catch_all && routingStatus.catch_all_action_type) issues.push(T('catch_all_wrong_type').replace('{type}', routingStatus.catch_all_action_type));
+        else if (!routingStatus.catch_all) issues.push(T('catch_all_not_set'));
+        if (routingStatus.mx_error) issues.push('MX API error: ' + routingStatus.mx_error);
+        else if (!routingStatus.mx_configured) issues.push(T('mx_not_set'));
+        if (issues.length) {
+          var box = document.getElementById('routingStatusBox');
+          if (box) { box.insertAdjacentHTML('afterend', '<div style="margin:4px 0 8px;padding:8px 12px;background:#fff3cd;border-radius:6px;font-size:11px;color:#856404;line-height:1.6">' + issues.map(function(ii) { return '\u2022 ' + esc(ii); }).join('<br>') + '</div>'); }
+        }
+      }
+    } catch (e2) {
+      var indicator2 = document.getElementById('routingStatusIndicator');
+      if (indicator2) indicator2.textContent = T('failed');
+    }
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function closeDnsPanel() {
+  var panel = document.getElementById('dnsDetailPanel');
+  if (panel) panel.remove();
+  if (dnsRefreshTimer) { clearInterval(dnsRefreshTimer); dnsRefreshTimer = null; }
+}
+
+/* ====== Settings ====== */
+let settingsDebounceTimers = {};
+
+function autoSaveSetting(key, getValue) {
+  if (settingsDebounceTimers[key]) clearTimeout(settingsDebounceTimers[key]);
+  settingsDebounceTimers[key] = setTimeout(async function() {
+    try {
+      var val = typeof getValue === 'function' ? getValue() : getValue;
+      var settings = {};
+      settings[key] = val;
+      // For sensitive fields: only skip if the field is empty AND the user has NOT explicitly edited it
+      // (i.e. they are still seeing the masked placeholder, not trying to clear the value)
+      if ((key === 'resend_api_key' || key === 'cf_api_token') && val === '') {
+        var elId = key === 'resend_api_key' ? 's_resend_api_key' : 's_cf_api_token';
+        var el = document.getElementById(elId);
+        // data-has-value stays 'true' until user edits the field (oninput sets it to 'false')
+        // So if it's still 'true', user never typed in the field — skip to avoid wiping the key
+        if (el && el.dataset.hasValue === 'true') return;
+        // If data-has-value is 'false', user explicitly cleared the field — allow saving empty to delete the key
+      }
+      await api('/api/settings', { method: 'PUT', body: JSON.stringify({ settings: settings }) });
+      toast(T('settings_saved'), 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  }, 600);
+}
+
+async function loadSettings() {
+  try {
+    var data = await api('/api/settings');
+    var s = data.settings || {};
+    var sensitiveFields = ['s_resend_api_key', 's_cf_api_token'];
+    var sensitiveKeys = ['resend_api_key', 'cf_api_token'];
+    sensitiveFields.forEach(function(fid, i) {
+      var el = document.getElementById(fid);
+      var key = sensitiveKeys[i];
+      if (s[key]) { el.value = ''; el.placeholder = T('configured') + ' \u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'; el.dataset.hasValue = 'true'; }
+      else { el.value = ''; el.placeholder = T('not_configured'); el.dataset.hasValue = 'false'; }
+    });
+    document.getElementById('s_tg_bot_token').value = s.tg_bot_token || '';
+    document.getElementById('s_tg_chat_id').value = s.tg_chat_id || '';
+    document.getElementById('s_tg_topic_id').value = s.tg_topic_id || '';
+    document.getElementById('s_forward_to').value = s.forward_to || '';
+    document.getElementById('s_auto_create_enabled').checked = s.auto_create_enabled === 'true' || s.auto_create_enabled === '1';
+    document.getElementById('s_auto_create_min_length').value = s.auto_create_min_length || '3';
+    document.getElementById('s_auto_create_max_length').value = s.auto_create_max_length || '30';
+    document.getElementById('webhookUrl').value = location.origin + '/api/webhook/inbound';
+    document.getElementById('resendEventsUrl').value = location.origin + '/api/resend-events';
+    // Resend webhook signing secret (sensitive)
+    var webhookSecretEl = document.getElementById('s_resend_webhook_secret');
+    if (s.resend_webhook_secret) {
+      webhookSecretEl.value = '';
+      webhookSecretEl.placeholder = T('configured') + ' ••••••••';
+      webhookSecretEl.dataset.hasValue = 'true';
+    } else {
+      webhookSecretEl.value = '';
+      webhookSecretEl.placeholder = 'whsec_...';
+      webhookSecretEl.dataset.hasValue = 'false';
+    }
+    document.getElementById('s_send_method').value = s.send_method || 'auto';
+    document.getElementById('s_domain_provider').value = s.domain_provider || 'resend';
+    updateDomainProviderUI(s.domain_provider || 'resend');
+    // Quota limit fields — pre-fill plan defaults when user hasn't saved a value yet
+    document.getElementById('s_resend_day_limit').value = s.resend_day_limit != null && s.resend_day_limit !== '' ? s.resend_day_limit : 100;
+    document.getElementById('s_resend_month_limit').value = s.resend_month_limit != null && s.resend_month_limit !== '' ? s.resend_month_limit : 3000;
+    document.getElementById('s_cf_day_limit').value = s.cf_day_limit != null && s.cf_day_limit !== '' ? s.cf_day_limit : 200;
+    document.getElementById('s_cf_month_limit').value = s.cf_month_limit != null && s.cf_month_limit !== '' ? s.cf_month_limit : '';
+
+    // Enable/disable quota inputs based on whether services are configured
+    var resendConfigured = !!(s.resend_api_key);
+    var cfConfigured = !!(s.cf_api_token);
+    var resendQuotaInputs = document.querySelectorAll('#resendQuotaGroup input');
+    var cfQuotaInputs = document.querySelectorAll('#cfQuotaGroup input');
+    var resendNotice = document.getElementById('resendQuotaNotice');
+    var cfNotice = document.getElementById('cfQuotaNotice');
+    resendQuotaInputs.forEach(function(el) { el.disabled = !resendConfigured; });
+    cfQuotaInputs.forEach(function(el) { el.disabled = !cfConfigured; });
+    if (!resendConfigured) {
+      resendNotice.textContent = T('quota_not_configured_resend');
+      resendNotice.style.display = '';
+    } else { resendNotice.style.display = 'none'; }
+    if (!cfConfigured) {
+      cfNotice.textContent = T('quota_not_configured_cf');
+      cfNotice.style.display = '';
+    } else { cfNotice.style.display = 'none'; }
+
+    // Bind auto-save events (remove old listeners by cloning)
+    var fields = [
+      { id: 's_resend_api_key', key: 'resend_api_key', event: 'change' },
+      { id: 's_cf_api_token', key: 'cf_api_token', event: 'change' },
+      { id: 's_domain_provider', key: 'domain_provider', event: 'change' },
+      { id: 's_tg_bot_token', key: 'tg_bot_token', event: 'change' },
+      { id: 's_tg_chat_id', key: 'tg_chat_id', event: 'change' },
+      { id: 's_tg_topic_id', key: 'tg_topic_id', event: 'change' },
+      { id: 's_forward_to', key: 'forward_to', event: 'change' },
+      { id: 's_auto_create_min_length', key: 'auto_create_min_length', event: 'change' },
+      { id: 's_auto_create_max_length', key: 'auto_create_max_length', event: 'change' },
+      { id: 's_send_method', key: 'send_method', event: 'change' },
+      { id: 's_resend_webhook_secret', key: 'resend_webhook_secret', event: 'change' },
+      { id: 's_resend_day_limit', key: 'resend_day_limit', event: 'change' },
+      { id: 's_resend_month_limit', key: 'resend_month_limit', event: 'change' },
+      { id: 's_cf_day_limit', key: 'cf_day_limit', event: 'change' },
+      { id: 's_cf_month_limit', key: 'cf_month_limit', event: 'change' },
+    ];
+    fields.forEach(function(f) {
+      var el = document.getElementById(f.id);
+      el.onchange = function() {
+        autoSaveSetting(f.key, el.value);
+        // Note: do NOT reload settings after send_method change — it would revert the dropdown
+        // before the debounced save completes (race condition)
+        if (f.key === 'domain_provider') {
+          updateDomainProviderUI(el.value);
+          loadDomains();
+        }
+      };
+      // For sensitive fields, mark as user-edited
+      if (f.key === 'resend_api_key' || f.key === 'cf_api_token' || f.key === 'resend_webhook_secret') {
+        el.oninput = function() { el.dataset.hasValue = 'false'; };
+      }
+    });
+    // autoSaveSetting must also skip webhook secret if placeholder hasn't been touched
+    var wse = document.getElementById('s_resend_webhook_secret');
+    var origAutoSave = autoSaveSetting;
+    // Patch: skip webhook secret save if user hasn't edited the field
+    wse.onchange = function() {
+      if (wse.dataset.hasValue === 'true') return;
+      autoSaveSetting('resend_webhook_secret', wse.value);
+    };
+    // Checkbox toggle auto-save
+    var autoCreateEl = document.getElementById('s_auto_create_enabled');
+    autoCreateEl.onchange = function() {
+      autoSaveSetting('auto_create_enabled', autoCreateEl.checked ? 'true' : 'false');
+    };
+  } catch (e) { console.error(e); }
+}
+
+function updateDomainProviderUI(provider) {
+  var resendGroup = document.getElementById('resend_key_group');
+  if (resendGroup) resendGroup.style.display = provider === 'resend' ? '' : 'none';
+  // Also update send method options based on provider
+  var sendMethod = document.getElementById('s_send_method');
+  if (sendMethod) {
+    if (provider === 'cf') {
+      // If CF provider, auto/cf_email_service are best; switch away from resend-only
+      if (sendMethod.value === 'resend') {
+        sendMethod.value = 'auto';
+        autoSaveSetting('send_method', 'auto');
+      }
+    } else if (provider === 'resend') {
+      // If Resend provider, resend is best; switch away from cf-only
+      if (sendMethod.value === 'cf_email_service') {
+        sendMethod.value = 'resend';
+        autoSaveSetting('send_method', 'resend');
+      }
+    }
+  }
+}
+
+async function saveSettings() {
+  // Keep for backward compatibility, but auto-save handles it now
+  var settings = {
+    tg_bot_token: document.getElementById('s_tg_bot_token').value,
+    tg_chat_id: document.getElementById('s_tg_chat_id').value,
+    tg_topic_id: document.getElementById('s_tg_topic_id').value,
+    forward_to: document.getElementById('s_forward_to').value,
+    auto_create_enabled: document.getElementById('s_auto_create_enabled').checked ? 'true' : 'false',
+    auto_create_min_length: document.getElementById('s_auto_create_min_length').value,
+    auto_create_max_length: document.getElementById('s_auto_create_max_length').value,
+    send_method: document.getElementById('s_send_method').value,
+    domain_provider: document.getElementById('s_domain_provider').value,
+  };
+  var resendEl = document.getElementById('s_resend_api_key');
+  var cfEl = document.getElementById('s_cf_api_token');
+  if (resendEl.value || resendEl.dataset.hasValue !== 'true') settings.resend_api_key = resendEl.value;
+  if (cfEl.value || cfEl.dataset.hasValue !== 'true') settings.cf_api_token = cfEl.value;
+  try { await api('/api/settings', { method: 'PUT', body: JSON.stringify({ settings: settings }) }); toast(T('settings_saved'), 'success'); } catch (e) { toast(e.message, 'error'); }
+}
+
+async function changePassword() {
+  var current = document.getElementById('s_current_pw').value;
+  var newPw = document.getElementById('s_new_pw').value;
+  var newUsername = document.getElementById('s_new_username').value.trim();
+  if (!current || !newPw) return toast(T('fill_both'), 'error');
+  try {
+    var payload = { current_password: current, new_password: newPw };
+    if (newUsername) payload.new_username = newUsername;
+    await api('/api/change-password', { method: 'POST', body: JSON.stringify(payload) });
+    toast(T('password_changed'), 'success');
+    document.getElementById('s_current_pw').value = '';
+    document.getElementById('s_new_pw').value = '';
+    document.getElementById('s_new_username').value = '';
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function loadStats() {
+  try {
+    var data = await api('/api/stats');
+    document.getElementById('statsGrid').innerHTML =
+      '<div class="stat-card"><div class="stat-value">' + data.mailboxes_total + '</div><div class="stat-label">' + T('mailboxes_stat') + '</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + data.inbox_total + '</div><div class="stat-label">' + T('received') + '</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + data.inbox_unread + '</div><div class="stat-label">' + T('unread') + '</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + data.sent_total + '</div><div class="stat-label">' + T('sent_stat') + '</div></div>' +
+      (data.sent_failed > 0 ? '<div class="stat-card" style="border-color:var(--danger)"><div class="stat-value" style="color:var(--danger)">' + data.sent_failed + '</div><div class="stat-label">' + T('status_bounced') + ' / ' + T('status_complained') + '</div></div>' : '') +
+      '<div class="stat-card"><div class="stat-value">' + (data.trash_total || 0) + '</div><div class="stat-label">' + T('trash_stat') + '</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (data.r2_files || 0) + '</div><div class="stat-label">' + T('r2_files') + '</div></div>';
+
+    const quotaEl = document.getElementById('quotaInfo');
+    // Always show quota — show 0 counts if service not configured
+    if (data.quota) {
+      function quotaBarColor(pct) {
+        if (pct >= 90) return 'var(--danger)';
+        if (pct >= 70) return 'var(--warning)';
+        return 'var(--primary)';
+      }
+      function quotaRow(label, used, limit) {
+        var pct = (limit != null && limit > 0) ? Math.min(100, Math.round(used / limit * 100)) : 0;
+        var color = (limit != null && limit > 0) ? quotaBarColor(pct) : 'var(--primary)';
+        var countStr = (limit != null && limit > 0) ? (used + ' / ' + limit) : (used + ' (' + T('quota_unlimited') + ')');
+        return '<div class="quota-row">' +
+          '<span class="quota-label">' + label + '</span>' +
+          '<div class="quota-bar-wrap"><div class="quota-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' +
+          '<span class="quota-count">' + countStr + '</span>' +
+        '</div>';
+      }
+
+      var sections = [];
+
+      // Resend section
+      var r = data.quota.resend || {};
+      var rRows = '';
+      rRows += quotaRow(T('quota_today'), r.sent_today || 0, r.day_limit != null ? r.day_limit : null);
+      rRows += quotaRow(T('quota_month'), r.sent_month || 0, r.month_limit != null ? r.month_limit : null);
+      var rStatusNote = r.configured === false
+        ? '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">(' + T('quota_not_configured') + ')</div>' : '';
+      sections.push(
+        '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Resend</div>' +
+        rStatusNote + rRows + '</div>'
+      );
+
+      // CF Email section
+      var c = data.quota.cf || {};
+      var cRows = '';
+      cRows += quotaRow(T('quota_today'), c.sent_today || 0, c.day_limit != null ? c.day_limit : null);
+      cRows += quotaRow(T('quota_month'), c.sent_month || 0, c.month_limit != null ? c.month_limit : null);
+      var cStatusNote = c.configured === false
+        ? '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">(' + T('quota_not_configured') + ')</div>' : '';
+      sections.push(
+        '<div>' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">CF Email</div>' +
+        cStatusNote + cRows + '</div>'
+      );
+
+      quotaEl.innerHTML =
+        '<div class="card" style="margin-bottom:0">' +
+          '<div class="card-title">' + T('email_quota') + '</div>' +
+          sections.join('') +
+        '</div>';
+    } else {
+      quotaEl.innerHTML = '';
+    }
+  } catch (e) { console.error(e); }
+}
+
+/* ====== Theme ====== */
+function toggleTheme() {
+  var current = document.documentElement.getAttribute('data-theme');
+  var next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('mailhub_theme', next);
+}
+
+/* ====== Sidebar (mobile) ====== */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+/* ====== Utilities ====== */
+function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function hashStr(s) { var h = 0; for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return h; }
+
+function parseUtcDate(t) {
+  if (!t) return new Date(NaN);
+  // If the string has no timezone info (no Z, no +HH:MM, no -HH:MM suffix), treat as UTC
+  var s = String(t);
+  if (!/Z$|[+-]\d{2}:\d{2}$|[+-]\d{4}$/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z';
+  }
+  return new Date(s);
+}
+
+function formatTime(t) {
+  if (!t) return '';
+  var d = parseUtcDate(t);
+  if (isNaN(d)) return String(t);
+  var now = new Date();
+  var timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return timeStr;
+  var dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  if (d.getFullYear() === now.getFullYear()) return dateStr + ' ' + timeStr;
+  return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + timeStr;
+}
+
+function formatSize(b) { if (!b) return '0 B'; if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+
+function downloadAttachment(id, filename) {
+  var tk = localStorage.getItem('mailhub_token');
+  fetch('/api/attachments/' + id + '/download', {
+    headers: { 'Authorization': 'Bearer ' + tk }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Download failed: ' + r.status);
+    return r.blob();
+  }).then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'attachment';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }).catch(function(e) { toast(e.message, 'error'); });
+}
+
+function downloadSentAttachment(id, filename) {
+  var tk = localStorage.getItem('mailhub_token');
+  fetch('/api/sent-attachments/' + id + '/download', {
+    headers: { 'Authorization': 'Bearer ' + tk }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Download failed');
+    return r.blob();
+  }).then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'attachment';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }).catch(function(e) { toast(e.message, 'error'); });
+}
+
+function downloadEml(id) {
+  var tk = localStorage.getItem('mailhub_token');
+  fetch('/api/messages/' + id + '/eml', {
+    headers: { 'Authorization': 'Bearer ' + tk }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Download failed');
+    return r.blob();
+  }).then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'message-' + id + '.eml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }).catch(function(e) { toast(e.message, 'error'); });
+}
+
+function toast(msg, type, duration) {
+  type = type || 'info';
+  duration = duration || 3000;
+  var container = document.getElementById('toastContainer');
+  var el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; setTimeout(function() { el.remove(); }, 300); }, duration);
+}
+</script>
+</body>
+</html>

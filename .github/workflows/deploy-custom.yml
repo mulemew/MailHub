@@ -1,0 +1,178 @@
+name: Deploy to Custom CF Account
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_api_token:
+        description: 'Cloudflare API Token (needs: Account:Read, Workers:Edit, D1:Edit, R2:Edit, Zone:Read, DNS:Edit, Email Routing:Edit, Email Sending:Edit)'
+        required: true
+        type: string
+      worker_name:
+        description: 'Worker name (default: mailhub)'
+        required: false
+        default: 'mailhub'
+        type: string
+      d1_db_name:
+        description: 'D1 database name (default: mailhub_db)'
+        required: false
+        default: 'mailhub_db'
+        type: string
+      r2_bucket_name:
+        description: 'R2 bucket name (default: mailhub-storage)'
+        required: false
+        default: 'mailhub-storage'
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Custom Account
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Validate token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+        run: |
+          echo "Validating CF API Token..."
+          RESULT=$(curl -s -H "Authorization: Bearer ${{ inputs.cf_api_token }}" \
+            "https://api.cloudflare.com/client/v4/user/tokens/verify")
+          STATUS=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('result',{}).get('status',''))" 2>/dev/null || echo "")
+          if [ "$STATUS" != "active" ]; then
+            echo "::error::CF API Token is invalid or inactive."
+            echo "$RESULT"
+            exit 1
+          fi
+          echo "Token is valid and active ✅"
+
+      - name: Auto-detect CF Account ID
+        id: account
+        run: |
+          echo "Detecting Account ID..."
+          ACCOUNT_ID=$(curl -s -H "Authorization: Bearer ${{ inputs.cf_api_token }}" \
+            "https://api.cloudflare.com/client/v4/accounts?per_page=1" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')" 2>/dev/null || echo "")
+          if [ -z "$ACCOUNT_ID" ]; then
+            echo "::error::Failed to detect Account ID. Ensure token has Account:Read permission."
+            exit 1
+          fi
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "Detected Account ID: ${ACCOUNT_ID:0:8}..."
+
+      - name: Update wrangler.toml with custom names
+        run: |
+          WORKER_NAME="${{ inputs.worker_name }}"
+          DB_NAME="${{ inputs.d1_db_name }}"
+          R2_BUCKET="${{ inputs.r2_bucket_name }}"
+
+          sed -i "s/^name = \".*\"/name = \"$WORKER_NAME\"/" wrangler.toml
+          sed -i "s/database_name = \".*\"/database_name = \"$DB_NAME\"/" wrangler.toml
+          sed -i "s/bucket_name = \".*\"/bucket_name = \"$R2_BUCKET\"/" wrangler.toml
+          sed -i "s/WORKER_NAME = \".*\"/WORKER_NAME = \"$WORKER_NAME\"/" wrangler.toml
+
+          echo "Updated wrangler.toml:"
+          cat wrangler.toml
+
+      - name: Auto-create R2 bucket
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          BUCKET_NAME="${{ inputs.r2_bucket_name }}"
+          EXISTING=$(wrangler r2 bucket list 2>/dev/null | grep "$BUCKET_NAME" || true)
+          if [ -z "$EXISTING" ]; then
+            echo "Creating R2 bucket: $BUCKET_NAME"
+            wrangler r2 bucket create "$BUCKET_NAME" 2>&1 || true
+          else
+            echo "R2 bucket $BUCKET_NAME already exists"
+          fi
+
+      - name: Auto-create D1 database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          DB_NAME="${{ inputs.d1_db_name }}"
+          EXISTING=$(wrangler d1 list --json 2>/dev/null | grep -o "\"$DB_NAME\"" || true)
+          if [ -z "$EXISTING" ]; then
+            echo "Creating D1 database: $DB_NAME"
+            wrangler d1 create "$DB_NAME" 2>&1 || true
+          else
+            echo "D1 database $DB_NAME already exists"
+          fi
+
+      - name: Get D1 database ID and update config
+        id: d1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          DB_NAME="${{ inputs.d1_db_name }}"
+          DB_ID=$(wrangler d1 list --json 2>/dev/null | python3 -c "
+          import json, sys
+          dbs = json.load(sys.stdin)
+          for db in dbs:
+              if db.get('name') == '$DB_NAME':
+                  print(db['uuid'])
+                  break
+          " 2>/dev/null || echo "")
+          echo "database_id=$DB_ID" >> $GITHUB_OUTPUT
+          if [ -n "$DB_ID" ]; then
+            sed -i "s/database_id = \"[^\"]*\"/database_id = \"$DB_ID\"/" wrangler.toml
+            echo "D1 database ID: $DB_ID"
+          else
+            echo "::warning::Could not find D1 database ID"
+          fi
+
+      - name: Run D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          wrangler d1 execute ${{ inputs.d1_db_name }} --remote --file=d1-init.sql
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: wrangler deploy
+
+      - name: Configure Worker secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ inputs.cf_api_token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          # Push CF_API_TOKEN as worker secret for runtime use
+          echo "${{ inputs.cf_api_token }}" | wrangler secret put CF_API_TOKEN_VAR 2>/dev/null || true
+
+      - name: Deployment summary
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+        run: |
+          echo "============================================"
+          echo " MailHub deployed successfully!"
+          echo "============================================"
+          echo ""
+          echo " Account ID:    ${CLOUDFLARE_ACCOUNT_ID:0:8}..."
+          echo " Worker name:   ${{ inputs.worker_name }}"
+          echo " D1 database:   ${{ inputs.d1_db_name }}"
+          echo " R2 bucket:     ${{ inputs.r2_bucket_name }}"
+          echo " JWT_SECRET:    auto-generated on first request"
+          echo ""
+          echo " Open your Worker URL to complete initial setup:"
+          echo "   1. Set admin username & password"
+          echo "   2. Choose domain provider (CF / Resend)"
+          echo "   3. Add domains and create mailboxes"
+          echo "============================================"
