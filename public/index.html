@@ -238,7 +238,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0
   .folder-col{width:48px;min-width:48px;padding:8px 4px;align-items:center}
   .folder-item{justify-content:center;padding:10px 0;gap:0}
   .folder-item span[data-i18n]{display:none}
-  .folder-item .folder-count{position:absolute;top:2px;right:2px;margin:0;font-size:9px;padding:0 4px;min-width:14px;text-align:center}
+  .folder-item .folder-count{display:none}
   .folder-item{position:relative}
 }
 @media(max-width:900px){
@@ -252,7 +252,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0
   .folder-item .folder-count{position:static;margin-left:auto;font-size:10px;padding:1px 6px}
   .msg-list-wrap{width:100%}
   .content{flex-direction:column}
-  .msg-detail-wrap{position:fixed;inset:0;z-index:50;background:var(--bg3)}
+  .msg-detail-wrap{position:fixed;inset:0;z-index:50;background:var(--bg3);display:none}
+  .msg-detail-wrap.mobile-show{display:flex}
   .mobile-back{display:flex!important}
 }
 @media(min-width:901px){
@@ -266,8 +267,9 @@ input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0
 <script>
 (function(){
   var t = localStorage.getItem('mailhub_token');
-  // Write initial display states inline so there's no flash
-  document.write('<style>#loginView{display:'+(t?'none':'flex')+'} #appView{display:'+(t?'flex':'none')+'}</style>');
+  var s = document.createElement('style');
+  s.textContent = '#loginView{display:'+(t?'none':'flex')+'} #appView{display:'+(t?'flex':'none')+'}';
+  document.head.appendChild(s);
 })();
 </script>
 
@@ -276,10 +278,12 @@ input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0
   <div class="login-card">
     <h1 data-i18n="login_title">MailHub</h1>
     <p data-i18n="login_subtitle">Email Service Dashboard</p>
-    <input type="text" id="loginUsername" data-i18n="login_username_placeholder" placeholder="Username" autocomplete="username">
-    <input type="password" id="loginPassword" data-i18n="login_placeholder" placeholder="Enter password" autocomplete="current-password">
-    <div class="turnstile-wrap" id="turnstileWrap"></div>
-    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()" data-i18n="login_btn">Login</button>
+    <form onsubmit="event.preventDefault();doLogin();" autocomplete="on">
+      <input type="text" id="loginUsername" data-i18n="login_username_placeholder" placeholder="Username" autocomplete="username">
+      <input type="password" id="loginPassword" data-i18n="login_placeholder" placeholder="Enter password" autocomplete="current-password">
+      <div class="turnstile-wrap" id="turnstileWrap"></div>
+      <button type="submit" class="btn btn-primary" id="loginBtn" data-i18n="login_btn">Login</button>
+    </form>
   </div>
 </div>
 
@@ -1733,6 +1737,7 @@ async function openMessage(id) {
     currentMessageData = msg;
     document.getElementById('detailEmpty').style.display = 'none';
     document.getElementById('detailContent').style.display = '';
+    document.getElementById('detailView').classList.add('mobile-show');
     document.getElementById('detailSubject').textContent = msg.subject || '(no subject)';
     document.getElementById('detailFrom').textContent = msg.sender;
     document.getElementById('detailTo').textContent = msg.to_addr;
@@ -1801,6 +1806,7 @@ function closeDetail() {
   currentMessageId = null;
   document.getElementById('detailEmpty').style.display = '';
   document.getElementById('detailContent').style.display = 'none';
+  document.getElementById('detailView').classList.remove('mobile-show');
 }
 
 async function deleteCurrentMsg() {
@@ -2465,6 +2471,7 @@ async function openSentMessage(id) {
     currentMessageData = e;
     document.getElementById('detailEmpty').style.display = 'none';
     document.getElementById('detailContent').style.display = '';
+    document.getElementById('detailView').classList.add('mobile-show');
     document.getElementById('detailSubject').textContent = e.subject || '(no subject)';
     document.getElementById('detailFrom').textContent = e.from_addr;
     let toAddrs = e.to_addrs;
