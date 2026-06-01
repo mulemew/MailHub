@@ -2058,6 +2058,13 @@ async function replyToMessage() {
 }
 
 async function showCompose(replyFrom) {
+  // Clear all fields first so new compose starts clean
+  document.getElementById('compTo').value = '';
+  document.getElementById('compCc').value = '';
+  document.getElementById('compBcc').value = '';
+  document.getElementById('compSubject').value = '';
+  composeAttachments = [];
+  document.getElementById('compFileList').innerHTML = '';
   document.getElementById('composeModal').classList.add('show');
   const sel = document.getElementById('compFrom');
   let options = mailboxes.map(m => '<option value="' + esc(m.address) + '">' + esc(m.address) + '</option>');
